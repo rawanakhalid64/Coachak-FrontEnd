@@ -1,13 +1,15 @@
+'use client';
 
-'use client'
+import { useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 
-import { useState } from "react";
-
-export default function CodeVerification({ email }) {
-  const [otp, setOtp] = useState("");
-  const [message, setMessage] = useState("");
-  const [isVerified, setIsVerified] = useState(false);
-
+export default function CodeVerification() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const email = searchParams.get("email");
+  const [otp, setOtp] = useState('');
+  const [message, setMessage] = useState('');
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -19,7 +21,8 @@ export default function CodeVerification({ email }) {
       const result = await response.json();
       if (response.ok) {
         setMessage("OTP verified successfully.");
-        setIsVerified(true);
+        // Navigate to the New Password page with the email as a query parameter
+        router.push(`/NewPassword?email=${email}`);
       } else {
         setMessage(result.error || "OTP verification failed.");
       }
@@ -27,12 +30,13 @@ export default function CodeVerification({ email }) {
       setMessage("An error occurred.");
     }
   };
+  
 
   return (
-    <div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#2E0D44]">
       <h2 className="text-xl font-bold text-white mb-2">Code Verification</h2>
       <p className="text-white mb-6">Please enter the 6-digit code sent to {email}.</p>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="w-full max-w-md px-4">
         <div className="relative w-full mb-6">
           <input
             type="text"
@@ -51,7 +55,6 @@ export default function CodeVerification({ email }) {
         </button>
       </form>
       {message && <p className="mt-4 text-pink-600">{message}</p>}
-      {isVerified && <p className="mt-4 text-green-600">You can now reset your password.</p>}
     </div>
   );
 }
