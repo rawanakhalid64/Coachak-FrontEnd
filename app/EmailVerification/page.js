@@ -63,10 +63,10 @@ const EmailVerification = () => {
         />
         <button
           type="submit"
-          className="w-full md:w-[325px] py-2 mt-6 font-semibold text-white rounded-md "
-          style={{
-            background: 'linear-gradient(277.62deg, #E5958E 30.69%, #220440 110.35%)'
-          }}
+          className="w-full  bg-[#2E0D44] md:w-[325px] py-2 mt-6 font-semibold text-white rounded-md "
+          // style={{
+          //   background: 'linear-gradient(277.62deg, #E5958E 30.69%, #220440 110.35%)'
+          // }}
         >
           Continue
         </button>

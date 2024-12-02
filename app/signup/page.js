@@ -24,7 +24,7 @@ const SignUpPage = () => {
     confirmPassword: "",
     phoneNumber: "",
     dateOfBirth: "",
-    role: "trainee",
+    role: "",
   });
   const [message, setMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -40,6 +40,37 @@ const SignUpPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const requiredFields = [
+      { name: "firstName", label: "First name" },
+      { name: "lastName", label: "Last name" },
+      { name: "email", label: "Email" },
+      { name: "password", label: "Password" },
+      { name: "confirmPassword", label: "Confirm Password" },
+      { name: "dateOfBirth", label: "Date of birth" },
+      { name: "phoneNumber", label: "Phone number" },
+      { name: "role", label: "Role" },
+    ];
+
+    for (let field of requiredFields) {
+      if (!formData[field.name]?.trim()) {
+        setMessage(`${field.label} is required.`);
+        console.log(`${field.label} is required.`);
+        return; // Stop form submission
+      }
+    }
+
+    // Client-side password validation
+    if (formData.password.length < 6) {
+      setMessage("Password must be at least 6 characters long.");
+      return; // Stop form submission
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setMessage("Passwords do not match.");
+      return; // Stop form submission
+    }
+
     try {
       const response = await fetch(
         "http://localhost:3001/api/v1/auth/register",
@@ -76,16 +107,12 @@ const SignUpPage = () => {
   };
 
   return (
-    <div className="relative min-h-screen flex place-items-center justify-between bg-[#2E0D44] text-white">
+    <div className="relative min-h-screen flex flex-col md:flex-row place-items-center justify-between bg-white md:bg-[#2E0D44] text-white">
       {/* Welcome Section Background */}
-      <div className=" inset-0 flex flex-col items-center justify-start p-10">
+      <div className="hidden md:flex w-full md:w-1/2 inset-0 flex-col items-center justify-start p-10">
         <h1
-          className="font-bold text-left text-[52px] leading-[62.05px] "
-          style={{
-            fontFamily: "SF Pro Display, sans-serif",
-            textUnderlinePosition: "from-font",
-            textDecorationSkipInk: "none",
-          }}
+          className="font-bold text-left text-[32px] md:text-[52px] leading-[42px] md:leading-[62.05px]"
+          style={{ fontFamily: "SF Pro Display, sans-serif" }}
         >
           Welcome Back!
         </h1>
@@ -98,18 +125,14 @@ const SignUpPage = () => {
           />
         </div>
         <p
-          className="text-center mt-[32px] font-normal text-[36px] leading-[42.96px] "
-          style={{
-            fontFamily: "SF Pro Display, sans-serif",
-            textUnderlinePosition: "from-font",
-            textDecorationSkipInk: "none",
-          }}
+          className="text-center mt-[32px] font-normal text-[20px] md:text-[36px] leading-[28px] md:leading-[42.96px]"
+          style={{ fontFamily: "SF Pro Display, sans-serif" }}
         >
           If you already have an account <br /> please click below to log in.
         </p>
         <Link href="/login">
           <button
-            className="mt-[56px] px-10 py-2 w-[277px] text-center rounded-xl font-sf-pro-display text-2xl font-extrabold leading-[38.19px] text-left underline decoration-solid decoration-transparent hover:underline"
+            className="mt-[16px] px-10 py-2 w-[200px] text-center rounded-xl font-sf-pro-display text-xl md:text-2xl font-extrabold leading-[38.19px] underline decoration-solid decoration-transparent hover:underline"
             style={{ backgroundColor: "#E5958E" }}
           >
             Login
@@ -118,7 +141,8 @@ const SignUpPage = () => {
       </div>
 
       {/* Sign Up Section */}
-      <div className=" min-h-screen relative z-10 flex flex-col items-center bg-white p-8 md:p-16 w-[60%]  rounded-tl-[50px] rounded-bl-[50px]">
+      <div className="min-h-screen relative z-10 flex flex-col items-center bg-white p-8 md:p-16 w-full md:w-[60%] rounded-tl-[50px] rounded-bl-[50px]">
+        {" "}
         <h2 className="text-3xl font-bold mb-6 text-black">Sign Up</h2>
         <form onSubmit={handleSubmit} className="space-y-6 w-[343px] ">
           <div className="flex flex-col space-y-2">
@@ -315,10 +339,10 @@ const SignUpPage = () => {
           </div>
 
           <div className="flex justify-center">
-  <button className="px-[55px] w-[277px] py-3 font-semibold text-white rounded-md transition-colors bg-custom-gradient mt-4">
-    Create Account
-  </button>
-</div>
+            <button className="px-[55px] w-[277px] py-3 font-semibold text-white rounded-md transition-colors bg-custom-gradient mt-4">
+              Create Account
+            </button>
+          </div>
 
           {message && <p className="mt-4 text-red-600">{message}</p>}
         </form>
@@ -360,6 +384,18 @@ const SignUpPage = () => {
               />
             </svg>
           </button>
+        </div>
+        <div className="block md:hidden">
+        
+
+          <Link href="/login">
+            <button
+              className="px-6 py-2 w-[100px] text-center rounded-md"
+              style={{ backgroundColor: "#E5958E" }}
+            >
+              Login
+            </button>
+          </Link>
         </div>
       </div>
     </div>

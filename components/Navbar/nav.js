@@ -29,7 +29,7 @@ const Navbar = () => {
       <div
         className={`${
           isMenuOpen ? 'flex' : 'hidden'
-        } flex-col items-center space-y-4 p-4 absolute top-16 left-0 right-0 bg-purple-700 text-white rounded-lg shadow-lg z-10 sm:hidden transition-all duration-300 ease-in-out`}
+        } flex-col items-center text-center space-y-4 p-4 absolute top-16 left-0 right-0 bg-purple-700 text-white rounded-lg shadow-lg z-10 sm:hidden transition-all duration-300 ease-in-out`}
       >
         <Link href="/" onClick={() => setIsMenuOpen(false)}>
           <span className="block hover:bg-purple-600 py-2 px-4 rounded-md transition-colors">Home</span>
@@ -42,7 +42,7 @@ const Navbar = () => {
         </Link>
 
         {/* Buttons */}
-        <div className="flex flex-col md:flex-row md:space-x-4 space-y-2 md:space-y-0 mt-4 md:mt-0">
+        <div className="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0 mt-4 md:mt-0">
           <Link href="/login">
             <span className="px-4 py-2 text-sm font-semibold text-white bg-[#E5958E] rounded-md hover:bg-[#E5958E] transition-colors">
               Login
@@ -64,7 +64,7 @@ const Navbar = () => {
       </div>
 
       {/* Buttons for Larger Screens */}
-      <div className="hidden sm:flex space-x-4">
+      <div className="hidden sm:flex space-x-4 ">
         <Link href="/login" className="px-4 py-2 text-sm font-semibold text-white bg-[#E5958E] rounded-md hover:bg-[#E5958E] transition-colors">
           Login
         </Link>
