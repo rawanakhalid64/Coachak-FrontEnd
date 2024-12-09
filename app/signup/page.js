@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import Cookies from "js-cookie";
 import {
   FaEnvelope,
   FaLock,
@@ -40,7 +41,7 @@ const SignUpPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+  
     const requiredFields = [
       { name: "firstName", label: "First name" },
       { name: "lastName", label: "Last name" },
@@ -51,7 +52,7 @@ const SignUpPage = () => {
       { name: "phoneNumber", label: "Phone number" },
       { name: "role", label: "Role" },
     ];
-
+  
     for (let field of requiredFields) {
       if (!formData[field.name]?.trim()) {
         setMessage(`${field.label} is required.`);
@@ -59,39 +60,47 @@ const SignUpPage = () => {
         return; // Stop form submission
       }
     }
-
+  
     // Client-side password validation
     if (formData.password.length < 6) {
       setMessage("Password must be at least 6 characters long.");
       return; // Stop form submission
     }
-
+  
     if (formData.password !== formData.confirmPassword) {
       setMessage("Passwords do not match.");
       return; // Stop form submission
     }
-
+  
     try {
-      const response = await fetch(
-        "http://localhost:3001/api/v1/auth/register",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(formData),
-        }
-      );
+      const response = await fetch("http://localhost:3001/api/v1/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+        credentials: "include", 
+      });
+  
       const result = await response.json();
-
+  
       if (response.ok) {
         setMessage(
           "User registered successfully. An OTP has been sent to your email."
         );
-        router.push(
-          `/EmailVerification?email=${encodeURIComponent(formData.email)}`
-        );
+  
+        // Assuming the response contains the user data
+        if (result.user) {
+          // Store the user data received from the backend in cookies
+          Cookies.set("userData", JSON.stringify(result.user), { expires: 7 });
+  
+          // Navigate to the verification page
+          router.push("/EmailVerification");
+        } else {
+          setMessage("Unexpected error: User data missing in the response.");
+        }
       } else {
+        // Handle errors returned by the backend
         if (result.errors) {
           const errorMessages = Object.values(result.errors)
             .map((err) => err.message)
@@ -103,9 +112,10 @@ const SignUpPage = () => {
       }
     } catch (error) {
       setMessage("An error occurred during registration.");
+      console.error(error);
     }
   };
-
+  
   return (
     <div className="relative min-h-screen flex flex-col md:flex-row place-items-center justify-between bg-white md:bg-[#2E0D44] text-white">
       {/* Welcome Section Background */}

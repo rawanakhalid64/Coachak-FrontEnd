@@ -1,13 +1,31 @@
 "use client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import Cookies from "js-cookie";
 
 const VerificationSuccess = () => {
   const router = useRouter();
 
-  const handleContinue = () => {
-    router.push("/"); // Navigate to the home page
-  };
+  useEffect(() => {
+    // Retrieve user data from cookies
+    const userData = Cookies.get("userData");
+    if (userData) {
+      const parsedData = JSON.parse(userData);
+
+      // Navigate based on the role
+      if (parsedData.role === "trainer") {
+        router.push("/trainer");
+      } else if (parsedData.role === "trainee") {
+        router.push("/traineeData");
+      } else {
+        router.push("/"); // Default fallback
+      }
+    } else {
+      router.push("/"); // If no user data, redirect to home
+    }
+  }, [router]);
+
 
   return (
     <div className="flex flex-col items-center bg-[#2E0D44] min-h-screen p-4 md:p-8">
