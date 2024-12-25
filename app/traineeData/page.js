@@ -1,214 +1,210 @@
-// app/traineeData/page.js
-"use client";
-
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-
+'use client';
+import { useState } from 'react';
+import Image from 'next/image';
+import axios from 'axios';
+import { useRouter } from 'next/navigation';
+import Cookies from 'js-cookie'; 
 export default function TraineeData() {
-  const router = useRouter();
   const [formData, setFormData] = useState({
-    picture: null,
-    goals: "",
-    birthdate: "",
-    height: "",
-    weight: "",
-    fitnessLevel: "Beginner",
-    healthConditions: "No",
-    allergies: "No",
+    image: null,
+    birthdate: '',
+    height: '',
+    weight: '',
+    goals: [],
+    fitnessLevel: '',
+    healthCondition: '',
+    allergies: '',
+    otherGoal: '',
   });
+  const [preview, setPreview] = useState(null);
+  const router = useRouter();
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+  
+  const goalsList = [
+    { label: 'Lose Weight', icon: 'https://res.cloudinary.com/dvgqyejfc/image/upload/v1733743102/Frame_1261154795_nhbtvj.png' },
+    { label: 'Gain Muscles', icon: 'https://res.cloudinary.com/dvgqyejfc/image/upload/v1733743110/Frame_1261154796_dpnggh.png' },
+    { label: 'Weight-lifting', icon: 'https://res.cloudinary.com/dvgqyejfc/image/upload/v1733743118/Frame_1261154797_d1husm.png' },
+    { label: 'Diet', icon: 'https://res.cloudinary.com/dvgqyejfc/image/upload/v1733743130/Frame_1261154798_ddkhti.png' },
+    { label: 'Other', icon: 'https://res.cloudinary.com/dvgqyejfc/image/upload/v1733743143/other_comp_wbwndw.png' },
+  ];
+  const fitnessLevels = ['Beginner', 'Intermediate', 'Advanced'];
+  const heights = Array.from({ length: 71 }, (_, i) => 150 + i); // Heights: 150cm - 220cm
+  const weights = Array.from({ length: 101 }, (_, i) => 40 + i); // Weights: 40kg - 140kg
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFormData((prev) => ({ ...prev, image: file }));
+      setPreview(URL.createObjectURL(file));
+    }
   };
 
-  const handleFileChange = (e) => {
-    setFormData({ ...formData, picture: e.target.files[0] });
+  const toggleGoal = (goal) => {
+    setFormData((prev) => {
+      const updatedGoals = prev.goals.includes(goal)
+        ? prev.goals.filter((g) => g !== goal)
+        : [...prev.goals, goal];
+      return { ...prev, goals: updatedGoals };
+    });
   };
 
-  const handleGoalSelect = (goal) => {
-    setFormData({ ...formData, goals: goal });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log("Form Submitted: ", formData);
-    router.push("/next-page"); // Replace with the next page route
+  const handleSubmit = async () => {
+    const token = Cookies.get('accessToken'); 
+    if (!token) {
+      console.error('No token found in cookies.');
+      return;
+    }
+    const payload = {
+      profilePic: formData.image,
+      dateOfBirth: formData.birthdate,
+      height: formData.height,
+      weight: formData.weight,
+      fitnessLevel: formData.fitnessLevel,
+      fitnessGoal: formData.goals.join(', '),
+      healthCondition: formData.healthCondition,
+      allergy: formData.allergies,
+    };
+  
+    try {
+      const response = await fetch('http://localhost:3001/api/v1/users/me', {
+        method: 'PATCH', 
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error updating profile');
+      }
+  
+      const responseData = await response.json();
+      console.log(responseData)
+      console.log('Profile updated:', responseData);
+  
+      router.push('/traineeProfileUpdated');
+    } catch (error) {
+      console.error('Error updating profile:', error.message);
+    }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="w-full max-w-4xl bg-white p-8 rounded-lg shadow-lg">
-        <h1 className="text-center text-2xl font-bold mb-6">Trainee Data</h1>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Picture Upload */}
-          <div className="flex flex-col items-center space-y-4">
-            <label className="text-lg font-medium">Please upload your picture</label>
-            <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center">
-              {formData.picture ? (
-                <img
-                  src={URL.createObjectURL(formData.picture)}
-                  alt="Uploaded"
-                  className="w-full h-full rounded-full object-cover"
-                />
-              ) : (
-                <span className="text-gray-500 text-sm">+</span>
-              )}
-            </div>
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              id="picture"
-              onChange={handleFileChange}
-            />
-            <label
-              htmlFor="picture"
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg cursor-pointer hover:bg-blue-600"
-            >
-              Upload
-            </label>
-          </div>
-
-          {/* Goals */}
-          <div>
-            <label className="block text-lg font-medium mb-2">What are your goals?</label>
-            <div className="grid grid-cols-3 gap-4">
-              {["Lose Weight", "Gain Muscles", "Weight-lifting", "Diet", "Other"].map((goal) => (
-                <button
-                  type="button"
-                  key={goal}
-                  onClick={() => handleGoalSelect(goal)}
-                  className={`p-4 border rounded-lg text-center ${
-                    formData.goals === goal
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                >
-                  {goal}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Age */}
-          <div>
-            <label className="block text-lg font-medium mb-2">What is your age?</label>
-            <input
-              type="date"
-              name="birthdate"
-              value={formData.birthdate}
-              onChange={handleInputChange}
-              className="w-full border p-2 rounded-lg"
-            />
-          </div>
-
-          {/* Height */}
-          <div>
-            <label className="block text-lg font-medium mb-2">What is your height?</label>
-            <input
-              type="text"
-              name="height"
-              value={formData.height}
-              onChange={handleInputChange}
-              placeholder="e.g., 170 cm"
-              className="w-full border p-2 rounded-lg"
-            />
-          </div>
-
-          {/* Weight */}
-          <div>
-            <label className="block text-lg font-medium mb-2">What is your weight?</label>
-            <input
-              type="text"
-              name="weight"
-              value={formData.weight}
-              onChange={handleInputChange}
-              placeholder="e.g., 65 kg"
-              className="w-full border p-2 rounded-lg"
-            />
-          </div>
-
-          {/* Fitness Level */}
-          <div>
-            <label className="block text-lg font-medium mb-2">
-              What is your current fitness level?
-            </label>
-            <div className="flex space-x-4">
-              {["Beginner", "Intermediate", "Advanced"].map((level) => (
-                <label
-                  key={level}
-                  className="flex items-center space-x-2 cursor-pointer"
-                >
-                  <input
-                    type="radio"
-                    name="fitnessLevel"
-                    value={level}
-                    checked={formData.fitnessLevel === level}
-                    onChange={handleInputChange}
-                  />
-                  <span>{level}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Health Conditions */}
-          <div>
-            <label className="block text-lg font-medium mb-2">
-              Do you have any health conditions?
-            </label>
-            <div className="flex space-x-4">
-              {["Yes", "No"].map((option) => (
-                <label
-                  key={option}
-                  className="flex items-center space-x-2 cursor-pointer"
-                >
-                  <input
-                    type="radio"
-                    name="healthConditions"
-                    value={option}
-                    checked={formData.healthConditions === option}
-                    onChange={handleInputChange}
-                  />
-                  <span>{option}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Allergies */}
-          <div>
-            <label className="block text-lg font-medium mb-2">
-              Do you have any allergies?
-            </label>
-            <div className="flex space-x-4">
-              {["Yes", "No"].map((option) => (
-                <label
-                  key={option}
-                  className="flex items-center space-x-2 cursor-pointer"
-                >
-                  <input
-                    type="radio"
-                    name="allergies"
-                    value={option}
-                    checked={formData.allergies === option}
-                    onChange={handleInputChange}
-                  />
-                  <span>{option}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600"
-          >
-            Next
-          </button>
-        </form>
+    <div className='p-8 max-w-4xl mx-auto bg-white rounded-lg shadow-lg'>
+      {/* Image Upload Section */}
+      <h1 className='text-2xl font-bold mb-6'>Please upload your picture</h1>
+      <div className='relative w-32 h-32 mx-auto mb-8 border-2 border-gray-300 rounded-full overflow-hidden'>
+        {preview ? (
+          <Image src={preview} alt='Preview' fill className='object-cover' />
+        ) : (
+          <label className='absolute inset-0 flex items-center justify-center cursor-pointer'>
+            <span className='text-purple-600 text-5xl'>+</span>
+            <input type='file' className='hidden' onChange={handleImageUpload} />
+          </label>
+        )}
       </div>
+
+      {/* Goals Section */}
+      <h2 className='text-lg font-medium mb-2'>What are your goals?</h2>
+      <div className='flex flex-wrap gap-4 mb-6'>
+        {goalsList.map((goal) => (
+          <button
+            key={goal.label}
+            onClick={() => toggleGoal(goal.label)}
+            className={`flex flex-col items-center px-4 py-2 rounded-md border border-gray-300 hover:border-purple-500 
+              ${formData.goals.includes(goal.label) ? 'bg-purple-500 text-white' : 'bg-white'}`}>
+            {goal.icon && <img src={goal.icon} alt={goal.label} className='w-8 h-8 mb-2' />}
+            {goal.label === 'Other' ? (
+              <input
+                type='text'
+                placeholder='Specify goal'
+                className='text-center text-black'
+                onChange={(e) => setFormData({ ...formData, otherGoal: e.target.value })}
+              />
+            ) : (
+              <span>{goal.label}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Personal Information Section */}
+      <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-6'>
+        <div>
+          <label className='block text-gray-700'>What is your age?</label>
+          <input
+            type='date'
+            className='mt-1 w-full border-b border-gray-300 focus:border-purple-500 focus:outline-none'
+            onChange={(e) => setFormData({ ...formData, birthdate: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className='block text-gray-700'>What is your height?</label>
+          <select
+            className='mt-1 w-full border-b border-gray-300 focus:border-purple-500 focus:outline-none'
+            onChange={(e) => setFormData({ ...formData, height: e.target.value })}>
+            <option value=''>Choose your height</option>
+            {heights.map((h) => (
+              <option key={h} value={h}>{`${h} cm`}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className='block text-gray-700'>What is your weight?</label>
+          <select
+            className='mt-1 w-full border-b border-gray-300 focus:border-purple-500 focus:outline-none'
+            onChange={(e) => setFormData({ ...formData, weight: e.target.value })}>
+            <option value=''>Choose your weight</option>
+            {weights.map((w) => (
+              <option key={w} value={w}>{`${w} kg`}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Health & Allergy Section */}
+      <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mb-6'>
+        <div>
+          <label className='block text-gray-700'>Do you have any health conditions?</label>
+          <input
+            type='text'
+            placeholder='Enter health conditions'
+            className='w-full border-b border-gray-300 focus:border-purple-500 focus:outline-none'
+            onChange={(e) => setFormData({ ...formData, healthCondition: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className='block text-gray-700'>Do you have any allergies?</label>
+          <input
+            type='text'
+            placeholder='Enter allergies'
+            className='w-full border-b border-gray-300 focus:border-purple-500 focus:outline-none'
+            onChange={(e) => setFormData({ ...formData, allergies: e.target.value })}
+          />
+        </div>
+      </div>
+
+      {/* Fitness Level Section */}
+      <h2 className='text-lg font-medium mb-2'>What is your current fitness level?</h2>
+      <div className='flex gap-4 mb-6'>
+        {fitnessLevels.map((level) => (
+          <button
+            key={level}
+            onClick={() => setFormData({ ...formData, fitnessLevel: level })}
+            className={`px-4 py-2 rounded-md border border-gray-300 hover:border-purple-500 
+              ${formData.fitnessLevel === level ? 'bg-purple-500 text-white' : 'bg-white'}`}>
+            {level}
+          </button>
+        ))}
+      </div>
+
+      {/* Submit Button */}
+      <button
+        onClick={handleSubmit}
+        className='w-full px-6 py-3 bg-purple-500 text-white rounded-md hover:bg-purple-600'>
+        Submit
+      </button>
     </div>
   );
 }

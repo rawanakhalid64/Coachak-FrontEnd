@@ -1,30 +1,32 @@
 "use client";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import Cookies from "js-cookie";
+import { useRouter } from "next/navigation";
+import { useSelector } from "react-redux";
 
 const VerificationSuccess = () => {
   const router = useRouter();
+  const userData = useSelector((state) => state.user.userData); 
+console.log(userData)
+useEffect(() => {
+  console.log("User Data:", userData);
+}, [userData]);
 
-  useEffect(() => {
-    // Retrieve user data from cookies
-    const userData = Cookies.get("userData");
+  const handleContinue = () => {
+  
     if (userData) {
-      const parsedData = JSON.parse(userData);
-
       // Navigate based on the role
-      if (parsedData.role === "trainer") {
-        router.push("/trainer");
-      } else if (parsedData.role === "trainee") {
+      if (userData.role === "trainer") {
+        router.push("/TrainerDataCreation");
+      } else if (userData.role === "trainee") {
         router.push("/traineeData");
       } else {
-        router.push("/"); // Default fallback
+        router.push("/"); // Default navigation if role is not recognized
       }
     } else {
-      router.push("/"); // If no user data, redirect to home
+      router.push("/"); // If no user data found, navigate to home
     }
-  }, [router]);
+  };
 
 
   return (
@@ -42,12 +44,12 @@ const VerificationSuccess = () => {
         home page.
       </p>
       <button
-        type="submit"
+        type="button" // Use "button" type for non-form buttons
         className="w-full md:w-[325px] py-2 mt-6 font-semibold text-white rounded-md"
         style={{
-          background: "linear-gradient(277.62deg, #E5958E 30.69%, #220440 110.35%)"
+          background: "linear-gradient(277.62deg, #E5958E 30.69%, #220440 110.35%)",
         }}
-        onClick={handleContinue}
+        onClick={handleContinue} // Attach the defined function
       >
         Continue
       </button>

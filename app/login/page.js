@@ -2,11 +2,13 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
 import Image from "next/image";
 import Link from "next/link";
 import { AiOutlineMail, AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 import { FaKey } from "react-icons/fa";
+import Cookies from "js-cookie";
+import { useDispatch } from "react-redux";
+import { setUserData } from "../../Redux/userSlice"; 
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -14,21 +16,19 @@ export default function Login() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
-
+  const dispatch = useDispatch();
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    
     try {
       const response = await fetch("http://localhost:3001/api/v1/auth/login", {
-        
-
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ email, password }),
       });
-      console.log(response)
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -36,11 +36,25 @@ export default function Login() {
       }
 
       const data = await response.json();
-      console.log(data)
-      if (data.data.accessToken) {
-        console.log("abas is fla7");
-        localStorage.setItem("token", data.token);
-        router.push("/");
+
+      if (data.data.accessToken && data.data.refreshToken) {
+        console.log("Login successful");
+
+        // Save tokens in cookies
+        Cookies.set("accessToken", data.data.accessToken, { expires: 1 / 24 }); // Expires in 1 hour
+        Cookies.set("refreshToken", data.data.refreshToken, { expires: 7 }); // Expires in 7 days
+
+        // Dispatch user data to Redux
+        dispatch(setUserData(data.data.user)); // Storing user data in Redux
+
+        // Navigate based on the role
+        if (data.data.user.role === "trainer") {
+          router.push("/TrainerDataCreation");
+        } else if (data.data.user.role === "trainee") {
+          router.push("/traineeProfileUpdated");
+        } else {
+          router.push("/login");  
+        }
       } else {
         setError(data.message || "Invalid login credentials.");
       }
@@ -49,6 +63,8 @@ export default function Login() {
       setError(err.message || "An error occurred. Please try again.");
     }
   };
+
+
 
   return (
     <div className="flex h-screen md:bg-[#E5958E] bg-white">

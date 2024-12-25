@@ -4,7 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { useDispatch } from "react-redux";
+import { setUserData } from "../../Redux/userSlice"; // Action to store user data
 import Cookies from "js-cookie";
+
 import {
   FaEnvelope,
   FaLock,
@@ -17,6 +20,8 @@ import {
 
 const SignUpPage = () => {
   const router = useRouter();
+  const dispatch = useDispatch();
+
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -41,7 +46,7 @@ const SignUpPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+
     const requiredFields = [
       { name: "firstName", label: "First name" },
       { name: "lastName", label: "Last name" },
@@ -52,26 +57,24 @@ const SignUpPage = () => {
       { name: "phoneNumber", label: "Phone number" },
       { name: "role", label: "Role" },
     ];
-  
+
     for (let field of requiredFields) {
       if (!formData[field.name]?.trim()) {
         setMessage(`${field.label} is required.`);
-        console.log(`${field.label} is required.`);
-        return; // Stop form submission
+        return;
       }
     }
-  
-    // Client-side password validation
+
     if (formData.password.length < 6) {
       setMessage("Password must be at least 6 characters long.");
-      return; // Stop form submission
+      return;
     }
-  
+
     if (formData.password !== formData.confirmPassword) {
       setMessage("Passwords do not match.");
-      return; // Stop form submission
+      return;
     }
-  
+
     try {
       const response = await fetch("http://localhost:3001/api/v1/auth/register", {
         method: "POST",
@@ -79,40 +82,41 @@ const SignUpPage = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
-        credentials: "include", 
       });
-  
+
       const result = await response.json();
-  
+
       if (response.ok) {
-        setMessage(
-          "User registered successfully. An OTP has been sent to your email."
-        );
-  
-        // Assuming the response contains the user data
-        if (result.user) {
-          // Store the user data received from the backend in cookies
-          Cookies.set("userData", JSON.stringify(result.user), { expires: 7 });
-  
-          // Navigate to the verification page
-          router.push("/EmailVerification");
+        setMessage("User registered successfully. An OTP has been sent to your email.");
+
+        // Save tokens in cookies
+        if (result.data?.accessToken) {
+          Cookies.set("accessToken", result.data.accessToken, { expires: 1 }); // Token expires in 1 day
+        }
+        if (result.data?.refreshToken) {
+          Cookies.set("refreshToken", result.data.refreshToken, { expires: 7 }); // Refresh token expires in 7 days
+        }
+
+        // Dispatch user data to Redux
+        if (result.data && result.data.user) {
+          dispatch(
+            setUserData({
+              user: result.data.user,
+              accessToken: result.data.accessToken,
+              refreshToken: result.data.refreshToken,
+            })
+          );
+          router.push(`/EmailVerification?email=${encodeURIComponent(formData.email)}`);
         } else {
-          setMessage("Unexpected error: User data missing in the response.");
+          setMessage("User data is missing in the response.");
         }
       } else {
-        // Handle errors returned by the backend
-        if (result.errors) {
-          const errorMessages = Object.values(result.errors)
-            .map((err) => err.message)
-            .join(", ");
-          setMessage(errorMessages);
-        } else {
-          setMessage(result.error || "Registration failed.");
-        }
+        const errorMessage = result.error || "Registration failed.";
+        setMessage(errorMessage);
       }
     } catch (error) {
       setMessage("An error occurred during registration.");
-      console.error(error);
+      console.error("Registration error:", error);
     }
   };
   
