@@ -16,15 +16,15 @@ useEffect(() => {
   
     if (userData) {
       // Navigate based on the role
-      if (userData.role === "trainer") {
+      if (userData.user.role === "trainer") {
         router.push("/TrainerDataCreation");
-      } else if (userData.role === "trainee") {
+      } else if (userData.user.role === "trainee") {
         router.push("/traineeData");
       } else {
         router.push("/"); // Default navigation if role is not recognized
       }
     } else {
-      router.push("/"); // If no user data found, navigate to home
+      router.push("/"); 
     }
   };
 
@@ -35,12 +35,12 @@ useEffect(() => {
       <Image
         src="https://res.cloudinary.com/dvgqyejfc/image/upload/v1731188512/Verified-bro_1_1_n2bjyp.webp"
         alt="Email Verified"
-        width={300} // Adjusted for smaller screens
+        width={300} 
         height={300}
         className="md:w-[500px] md:h-[500px] object-contain"
       />
       <p className="text-center text-white mt-4 text-sm md:text-base">
-        Your email is successfully verified. Please press <br className="hidden md:block" /> continue to go to the
+      Welcome, {userData?.user?.firstName} {userData?.user?.lastName}! Your account has been verified successfully. <br className="hidden md:block" /> continue to go to the
         home page.
       </p>
       <button

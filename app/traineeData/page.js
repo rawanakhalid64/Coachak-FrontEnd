@@ -7,7 +7,7 @@ import Cookies from 'js-cookie';
 export default function TraineeData() {
   const [formData, setFormData] = useState({
     image: null,
-    birthdate: '',
+    job: '',
     height: '',
     weight: '',
     goals: [],
@@ -56,7 +56,7 @@ export default function TraineeData() {
     }
     const payload = {
       profilePic: formData.image,
-      dateOfBirth: formData.birthdate,
+      job: formData.job,
       height: formData.height,
       weight: formData.weight,
       fitnessLevel: formData.fitnessLevel,
@@ -132,11 +132,11 @@ export default function TraineeData() {
       {/* Personal Information Section */}
       <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-6'>
         <div>
-          <label className='block text-gray-700'>What is your age?</label>
+          <label className='block text-gray-700'>What is your job?</label>
           <input
-            type='date'
+            type='text'
             className='mt-1 w-full border-b border-gray-300 focus:border-purple-500 focus:outline-none'
-            onChange={(e) => setFormData({ ...formData, birthdate: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, job: e.target.value })}
           />
         </div>
         <div>

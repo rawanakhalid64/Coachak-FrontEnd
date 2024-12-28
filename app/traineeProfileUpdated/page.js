@@ -342,7 +342,7 @@ export default function TraineeProfileUpdated() {
             <input
               type="date"
               name="birthdate"
-              value={new Date(userData.birthdate).toLocaleDateString()}
+              value={new Date(userData.birthdate).toLocaleDateString()} 
               onChange={handleChange}
               disabled={!isEditing}
               className="border rounded w-full py-2 px-3"

@@ -41,8 +41,8 @@ export default function Login() {
         console.log("Login successful");
 
         // Save tokens in cookies
-        Cookies.set("accessToken", data.data.accessToken, { expires: 1 / 24 }); // Expires in 1 hour
-        Cookies.set("refreshToken", data.data.refreshToken, { expires: 7 }); // Expires in 7 days
+        Cookies.set("accessToken", data.data.accessToken, { expires: 1 / 24 }); 
+        Cookies.set("refreshToken", data.data.refreshToken, { expires: 7 }); 
 
         // Dispatch user data to Redux
         dispatch(setUserData(data.data.user)); // Storing user data in Redux

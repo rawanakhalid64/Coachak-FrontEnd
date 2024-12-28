@@ -88,6 +88,8 @@ export default function CodeVerification() {
   const [otp, setOtp] = useState('');
   const [message, setMessage] = useState('');
   const [isResending, setIsResending] = useState(false);
+  import axiosInstance from "../utils/axios";
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
