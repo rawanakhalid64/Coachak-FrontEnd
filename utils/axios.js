@@ -1,36 +1,31 @@
-
 import axios from 'axios';
-import { useAuthStore } from './authStore'; // Adjust the import to match your project's structure
-import { refreshToken } from '../../backend/routes/authRoute'; // Adjust this to your refresh token API method
-import { cookies } from 'next/headers';
+import Cookies from 'js-cookie';
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
 
 // Create an Axios instance
 const instance = axios.create({
-  withCredentials: true, // Send cookies with each request
-  baseURL: `${BASE_URL}` // Base URL for all requests
+  baseURL: BASE_URL,
+  withCredentials: true,
 });
 
 // Request interceptor to add the access token to the headers
 instance.interceptors.request.use(
   (config) => {
-    const token = cookies().get('accessToken') || localStorage.getItem('accessToken'); // Get access token from local storage
-    console.log('Access Token:', token); // Log the token for debugging
-
+    const token = Cookies.get('accessToken');
     if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`; // Add token to headers if it exists
+      config.headers['Authorization'] = `Bearer ${token}`;
     }
-    return config; // Return the modified config
+    return config;
   },
-  (error) => {
-    return Promise.reject(error); // Reject the promise if there's an error
-  }
+  (error) => Promise.reject(error)
 );
 
 // Flag to prevent multiple refresh requests
 let isRefreshing = false;
 let refreshSubscribers = [];
 
-// Subscribe to token refresh event
+// Notify subscribers with the new token
 const onTokenRefreshed = (newAccessToken) => {
   refreshSubscribers.forEach((callback) => callback(newAccessToken));
   refreshSubscribers = [];
@@ -41,44 +36,43 @@ const addRefreshSubscriber = (callback) => {
   refreshSubscribers.push(callback);
 };
 
+// Function to refresh the token
+const getRefreshToken = async (refreshToken) => {
+  return axios.post(`${BASE_URL}/auth/refresh-token`, { refreshToken });
+};
+
 // Response interceptor to handle errors and refresh the token if needed
 instance.interceptors.response.use(
-  (response) => response, // Simply return the response if successful
+  (response) => response,
   async (error) => {
-    const originalRequest = error.config; // Store the original request
+    const originalRequest = error.config;
 
-    // Check if the error is a 401 Unauthorized due to an invalid token
-    if (error.response?.status === 401 && error.response.data?.message === 'Unauthorized - Invalid token') {
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
       if (!isRefreshing) {
         isRefreshing = true;
-        const refreshToken = localStorage.getItem('refreshToken'); // Get refresh token from local storage
+        const refreshToken = Cookies.get('refreshToken');
 
         try {
-          // Attempt to get a new access token using the refresh token
           const refreshResponse = await getRefreshToken(refreshToken);
+          const newAccessToken = refreshResponse.data.accessToken;
 
-          // Update the access token in the state
-          useAuthStore.getState().updateAccessToken(refreshResponse.data.accessToken);
+          // Update the access token in cookies
+          Cookies.set('accessToken', newAccessToken, { expires: 1 / 24 });
 
           // Notify all subscribers with the new token
-          onTokenRefreshed(refreshResponse.data.accessToken);
+          onTokenRefreshed(newAccessToken);
 
-          // Set refreshing flag to false
           isRefreshing = false;
         } catch (refreshError) {
-          // Log the error if refreshing the token fails
           console.error('Refresh token failed:', refreshError);
-
-          // Logout the user if the refresh token fails
-          useAuthStore.getState().logout();
           isRefreshing = false;
-
-          // Reject the promise with the error
           return Promise.reject(refreshError);
         }
       }
 
-      // Wait for the refresh to complete and retry the original request
+      // Wait for the token refresh and retry the original request
       return new Promise((resolve) => {
         addRefreshSubscriber((newAccessToken) => {
           originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
@@ -87,7 +81,6 @@ instance.interceptors.response.use(
       });
     }
 
-    // Reject the promise with the error if not a 401
     return Promise.reject(error);
   }
 );

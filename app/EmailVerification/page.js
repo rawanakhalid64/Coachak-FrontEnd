@@ -2,11 +2,14 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import instance from "../../utils/axios";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const EmailVerification = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const email = searchParams.get("email"); // Retrieve email from query
+  const email = searchParams.get("email"); 
   const [otp, setOtp] = useState('');
   const [message, setMessage] = useState('');
 
@@ -16,30 +19,31 @@ const EmailVerification = () => {
 
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
-    console.log("Email:", email, "OTP:", otp); // Debugging log
+    console.log("Email:", email, "OTP:", otp); 
     try {
-      const response = await fetch("http://localhost:3001/api/v1/auth/verify-password-otp", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ email, otp })
+      const response = await instance.post("/api/v1/auth/verify-password-otp", {
+        email,
+        otp,
       });
-      const result = await response.json();
-  
-      if (response.ok) {
-        setMessage("OTP verified successfully.");
+
+      if (response.status === 200) {
+        toast.success("OTP verified successfully.");
         router.push("/verification-success");
       } else {
-        setMessage(result.error || "OTP verification failed.");
+        setMessage(response.data.error || "OTP verification failed.");
+        toast.error(errorMessage);
       }
     } catch (error) {
-      setMessage("An error occurred during OTP verification.");
+      console.error("Error:", error.response || error.message);
+      setMessage(
+        error.response?.data?.error || "An error occurred during OTP verification."
+      );
     }
   };
   
   return (
     <div className="flex flex-col items-center bg-white min-h-screen p-4 md:p-8">
+        <ToastContainer position="top-right" autoClose={3000} />
       <h1 className="text-xl md:text-2xl font-bold mt-3 text-center">Email Confirmation</h1>
       <Image 
         src="https://res.cloudinary.com/dvgqyejfc/image/upload/v1730836823/Mail_sent-amico_1_nqhdlc.webp" 

@@ -7,7 +7,9 @@ import Link from "next/link";
 import { useDispatch } from "react-redux";
 import { setUserData } from "../../Redux/userSlice"; // Action to store user data
 import Cookies from "js-cookie";
-
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import instance from "../../utils/axios";
 import {
   FaEnvelope,
   FaLock,
@@ -60,68 +62,66 @@ const SignUpPage = () => {
 
     for (let field of requiredFields) {
       if (!formData[field.name]?.trim()) {
-        setMessage(`${field.label} is required.`);
+        toast.error(`${field.label} is required.`);
         return;
       }
     }
 
     if (formData.password.length < 6) {
-      setMessage("Password must be at least 6 characters long.");
+      toast.error("Password must be at least 6 characters long.");
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setMessage("Passwords do not match.");
+      toast.error("Passwords do not match.");
       return;
     }
-
     try {
-      const response = await fetch("http://localhost:3001/api/v1/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      const response = await instance.post("/api/v1/auth/register", formData);
 
-      const result = await response.json();
+      if (response.status === 201) {
+        toast.success(
+          "User registered successfully. An OTP has been sent to your email."
+        );
 
-      if (response.ok) {
-        setMessage("User registered successfully. An OTP has been sent to your email.");
+        const { accessToken, refreshToken, user } = response.data.data || {};
 
-        // Save tokens in cookies
-        if (result.data?.accessToken) {
-          Cookies.set("accessToken", result.data.accessToken, { expires: 1 }); // Token expires in 1 day
+        if (accessToken) {
+          Cookies.set("accessToken", accessToken, { expires: 1 }); // Token expires in 1 day
         }
-        if (result.data?.refreshToken) {
-          Cookies.set("refreshToken", result.data.refreshToken, { expires: 7 }); // Refresh token expires in 7 days
+        if (refreshToken) {
+          Cookies.set("refreshToken", refreshToken, { expires: 7 }); // Refresh token expires in 7 days
         }
 
-        // Dispatch user data to Redux
-        if (result.data && result.data.user) {
+      
+        if (user) {
           dispatch(
             setUserData({
-              user: result.data.user,
-              accessToken: result.data.accessToken,
-              refreshToken: result.data.refreshToken,
+              user,
+              accessToken,
+              refreshToken,
             })
           );
-          router.push(`/EmailVerification?email=${encodeURIComponent(formData.email)}`);
+          router.push(
+            `/EmailVerification?email=${encodeURIComponent(formData.email)}`
+          );
         } else {
-          setMessage("User data is missing in the response.");
+          toast.error("User data is missing in the response.");
         }
-      } else {
-        const errorMessage = result.error || "Registration failed.";
-        setMessage(errorMessage);
       }
     } catch (error) {
-      setMessage("An error occurred during registration.");
+      const errorMessage =
+        error.response?.data?.error || "Registration failed.";
+      toast.error(errorMessage);
       console.error("Registration error:", error);
     }
   };
+
+  
   
   return (
     <div className="relative min-h-screen flex flex-col md:flex-row place-items-center justify-between bg-white md:bg-[#2E0D44] text-white">
+        <ToastContainer position="top-right" autoClose={3000} />
       {/* Welcome Section Background */}
       <div className="hidden md:flex w-full md:w-1/2 inset-0 flex-col items-center justify-start p-10">
         <h1
@@ -132,7 +132,7 @@ const SignUpPage = () => {
         </h1>
         <div className="w-3/4 mt-4">
           <Image
-            src="https://res.cloudinary.com/dvgqyejfc/image/upload/v1730582563/Welcome-cuate_1_rxxc0c.webp"
+          src="https://res.cloudinary.com/dvgqyejfc/image/upload/v1735840584/Frame_1261154968_bvprzu.png"
             alt="Welcome"
             width={500}
             height={500}
@@ -158,7 +158,7 @@ const SignUpPage = () => {
       <div className="min-h-screen relative z-10 flex flex-col items-center bg-white p-8 md:p-16 w-full md:w-[60%] rounded-tl-[50px] rounded-bl-[50px]">
         {" "}
         <h2 className="text-3xl font-bold mb-6 text-black">Sign Up</h2>
-        <form onSubmit={handleSubmit} className="space-y-6 w-[343px] ">
+        <form onSubmit={handleSubmit} className="space-y-3 w-[343px] ">
           <div className="flex flex-col space-y-2">
             <label htmlFor="firstName" className="text-black font-semibold">
               First Name
@@ -171,7 +171,7 @@ const SignUpPage = () => {
                 id="firstName"
                 value={formData.firstName}
                 onChange={handleInputChange}
-                className="w-full text-black border-none p-2 ml-2"
+                className="w-full text-black border-none p-[3px] ml-2"
                 placeholder="Type here"
                 required
               />
@@ -190,7 +190,7 @@ const SignUpPage = () => {
                 id="lastName"
                 value={formData.lastName}
                 onChange={handleInputChange}
-                className="w-full text-black border-none p-2 ml-2"
+                className="w-full text-black border-none p-[3px] ml-2"
                 placeholder=" Type here"
                 required
               />
@@ -209,7 +209,7 @@ const SignUpPage = () => {
                 id="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className="w-full text-black border-none p-2 ml-2"
+                className="w-full text-black border-none p-[3px] ml-2"
                 placeholder="Type here"
                 required
               />
@@ -228,7 +228,7 @@ const SignUpPage = () => {
                 id="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                className="w-full text-black border-none p-2 ml-2"
+                className="w-full text-black border-none p-[3px] ml-2"
                 placeholder="Type here"
                 required
               />
@@ -261,7 +261,7 @@ const SignUpPage = () => {
                 id="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
-                className="w-full text-black border-none p-2 ml-2"
+                className="w-full text-black border-none p-[3px] ml-2"
                 placeholder=" Type here"
                 required
               />
@@ -291,7 +291,7 @@ const SignUpPage = () => {
                 id="phoneNumber"
                 value={formData.phoneNumber}
                 onChange={handleInputChange}
-                className="w-full text-black border-none p-2 ml-2"
+                className="w-full text-black border-none p-[3px] ml-2"
                 placeholder="Type here "
                 required
               />
@@ -310,7 +310,7 @@ const SignUpPage = () => {
                 id="dateOfBirth"
                 value={formData.dateOfBirth}
                 onChange={handleInputChange}
-                className="w-full text-black border-none p-2 ml-2"
+                className="w-full text-black border-none p-[3px] ml-2"
                 required
               />
             </div>
