@@ -5,18 +5,20 @@ import Image from "next/image";
 import instance from "../../utils/axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-
 const EmailVerification = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const email = searchParams.get("email"); 
-  const [otp, setOtp] = useState('');
-  const [message, setMessage] = useState('');
+  const email = searchParams.get("email");
+  const [otp, setOtp] = useState("");
+  const [message, setMessage] = useState("");
+  const [isResending, setIsResending] = useState(false);
 
+  // Handle OTP input change
   const handleOtpChange = (e) => {
     setOtp(e.target.value);
   };
 
+  // Handle OTP submission
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
     console.log("Email:", email, "OTP:", otp); 
@@ -25,22 +27,46 @@ const EmailVerification = () => {
         email,
         otp,
       });
-
-      if (response.status === 200) {
+  
+      if (response.status === 200 || response.status === 201) {
         toast.success("OTP verified successfully.");
         router.push("/verification-success");
+      } else if (response.data.error) {
+        toast.error(response.data.error);
       } else {
-        setMessage(response.data.error || "OTP verification failed.");
-        toast.error(errorMessage);
+        toast.error("Unexpected response from the server.");
       }
     } catch (error) {
-      console.error("Error:", error.response || error.message);
-      setMessage(
-        error.response?.data?.error || "An error occurred during OTP verification."
-      );
+      const errorMessage = error.response?.data?.error || "An error occurred during OTP verification.";
+      console.error("Error during OTP verification:", error); 
+      toast.error(errorMessage);
     }
   };
   
+  // Handle OTP resend
+  const handleResend = async () => {
+    setIsResending(true);
+    setMessage("");
+    console.log("Attempting to resend OTP to:", email); 
+    try {
+      const response = await instance.post("/api/v1/auth/send-otp", { email });
+      console.log("OTP resend response:", response); 
+
+      if (response.status === 200 || response.status === 201) {
+        setMessage("A new OTP has been sent to your email.");
+        toast.success("A new OTP has been sent to your email.");
+      } else {
+        setMessage(response.data.error || "Failed to resend OTP.");
+        toast.error(response.data.error || "Failed to resend OTP.");
+      }
+    } catch (error) {
+      console.error("Error resending OTP:", error); 
+      setMessage("An error occurred while resending the OTP.");
+      toast.error("An error occurred while resending the OTP.");
+    } finally {
+      setIsResending(false);
+    }
+  };
   return (
     <div className="flex flex-col items-center bg-white min-h-screen p-4 md:p-8">
         <ToastContainer position="top-right" autoClose={3000} />
@@ -74,11 +100,18 @@ const EmailVerification = () => {
         >
           Continue
         </button>
-        {message && (
-          <p className={`mt-2 text-center ${message === "OTP verified successfully." ? 'text-green-600' : 'text-red-600'}`}>
-            {message}
-          </p>
-        )}
+        <button
+        onClick={handleResend}
+        disabled={isResending}
+        className={`btn ${isResending ? "opacity-50 " : "w-full  bg-[#9a54c8] md:w-[325px] py-2 mt-6 font-semibold text-white rounded-md "}`}
+      >
+        {isResending ? "Resending..." : "Resend OTP"}
+      </button>
+        {/* {message && ( */}
+          {/* // <p className={`mt-2 text-center ${message === "OTP verified successfully." ? 'text-green-600' : 'text-red-600'}`}>
+          //   {message}
+          // </p> */}
+        {/* )} */}
       </form>
     </div>
   );

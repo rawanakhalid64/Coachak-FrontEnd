@@ -120,7 +120,7 @@ const SignUpPage = () => {
   
   
   return (
-    <div className="relative min-h-screen flex flex-col md:flex-row place-items-center justify-between bg-white md:bg-[#2E0D44] text-white">
+    <div className="relative min-h-[1024px]  flex flex-col md:flex-row place-items-center justify-between bg-white md:bg-[#2E0D44] text-white">
         <ToastContainer position="top-right" autoClose={3000} />
       {/* Welcome Section Background */}
       <div className="hidden md:flex w-full md:w-1/2 inset-0 flex-col items-center justify-start p-10">
@@ -324,9 +324,9 @@ const SignUpPage = () => {
               <div className="flex items-center">
                 <input
                   type="radio"
-                  id="trainee"
+                  id="client"
                   name="role"
-                  value="trainee"
+                  value="client"
                   // checked={formData.role === 'trainee'}
                   onChange={handleInputChange}
                   className="text-black"

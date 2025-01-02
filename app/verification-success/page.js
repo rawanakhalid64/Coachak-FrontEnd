@@ -15,13 +15,13 @@ useEffect(() => {
   const handleContinue = () => {
   
     if (userData) {
-      // Navigate based on the role
+     
       if (userData.user.role === "trainer") {
         router.push("/TrainerDataCreation");
-      } else if (userData.user.role === "trainee") {
+      } else if (userData.user.role === "client") {
         router.push("/traineeData");
       } else {
-        router.push("/"); // Default navigation if role is not recognized
+        router.push("/"); 
       }
     } else {
       router.push("/"); 
