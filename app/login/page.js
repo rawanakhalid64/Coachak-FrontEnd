@@ -52,8 +52,8 @@ export default function Login() {
         const role = data.data.user.role;
         if (role === "trainer") {
           router.push("/TrainerDataCreation");
-        } else if (role === "trainee") {
-          router.push("/traineeProfileUpdated");
+        } else if (role === "client") {
+          router.push("/traineeData");
         } else {
           router.push("/login");
         }

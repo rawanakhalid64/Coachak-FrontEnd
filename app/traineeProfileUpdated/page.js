@@ -185,7 +185,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Cookies from "js-cookie";
-
+import instance from '../../utils/axios';
 export default function TraineeProfileUpdated() {
   const [userData, setUserData] = useState({
     firstName: "",

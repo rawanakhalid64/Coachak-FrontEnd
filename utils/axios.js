@@ -38,7 +38,7 @@ const addRefreshSubscriber = (callback) => {
 
 // Function to refresh the token
 const getRefreshToken = async (refreshToken) => {
-  return axios.post(`${BASE_URL}/auth/refresh-token`, { refreshToken });
+  return axios.post(`${BASE_URL}/api/v1/auth/refresh-token`, { refreshToken });
 };
 
 // Response interceptor to handle errors and refresh the token if needed

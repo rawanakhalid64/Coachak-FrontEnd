@@ -1,9 +1,10 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import axios from 'axios';
 import { useRouter } from 'next/navigation';
-import Cookies from 'js-cookie'; 
+import Cookies from 'js-cookie';
+import instance from "../../utils/axios";
+
 export default function TraineeData() {
   const [formData, setFormData] = useState({
     image: null,
@@ -12,14 +13,17 @@ export default function TraineeData() {
     weight: '',
     goals: [],
     fitnessLevel: '',
-    healthCondition: '',
-    allergies: '',
+    healthCondition: [],
+    allergies: [],
     otherGoal: '',
   });
   const [preview, setPreview] = useState(null);
+  const [hasHealthCondition, setHasHealthCondition] = useState(false);
+  const [hasAllergies, setHasAllergies] = useState(false);
+  const [newHealthCondition, setNewHealthCondition] = useState('');
+  const [newAllergy, setNewAllergy] = useState('');
   const router = useRouter();
 
-  
   const goalsList = [
     { label: 'Lose Weight', icon: 'https://res.cloudinary.com/dvgqyejfc/image/upload/v1733743102/Frame_1261154795_nhbtvj.png' },
     { label: 'Gain Muscles', icon: 'https://res.cloudinary.com/dvgqyejfc/image/upload/v1733743110/Frame_1261154796_dpnggh.png' },
@@ -28,8 +32,24 @@ export default function TraineeData() {
     { label: 'Other', icon: 'https://res.cloudinary.com/dvgqyejfc/image/upload/v1733743143/other_comp_wbwndw.png' },
   ];
   const fitnessLevels = ['Beginner', 'Intermediate', 'Advanced'];
-  const heights = Array.from({ length: 71 }, (_, i) => 150 + i); // Heights: 150cm - 220cm
-  const weights = Array.from({ length: 101 }, (_, i) => 40 + i); // Weights: 40kg - 140kg
+  const heights = Array.from({ length: 71 }, (_, i) => 150 + i);
+  const weights = Array.from({ length: 101 }, (_, i) => 40 + i);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const healthResponse = await instance.get('/api/v1/health-conditions');
+        setHealthConditions(healthResponse.data.healthConditions);
+
+        const allergyResponse = await instance.get('/api/v1/allergies');
+        setAllergiesList(allergyResponse.data.allergy);
+      } catch (error) {
+        console.error('Error fetching health conditions or allergies:', error);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -48,45 +68,67 @@ export default function TraineeData() {
     });
   };
 
+  // const toggleSelection = (id, type) => {
+  //   setFormData((prev) => {
+  //     const updatedSelection = prev[type].includes(id)
+  //       ? prev[type].filter((item) => item !== id)
+  //       : [...prev[type], id];
+  //     return { ...prev, [type]: updatedSelection };
+  //   });
+  // };
+
+  const handleAddHealthCondition = async () => {
+    if (!newHealthCondition) return;
+    try {
+      const response = await instance.post('/api/v1/health-conditions', { name: newHealthCondition });
+      setHealthConditions([...healthConditions, response.data.healthCondition]);
+      setNewHealthCondition('');
+    } catch (error) {
+      console.error('Error adding new health condition:', error);
+    }
+  };
+
+  const handleAddAllergy = async () => {
+    if (!newAllergy) return;
+    try {
+      const response = await instance.post('/api/v1/allergies', { name: newAllergy });
+      setAllergiesList([...allergiesList, response.data.allergy]);
+      setNewAllergy('');
+    } catch (error) {
+      console.error('Error adding new allergy:', error);
+    }
+  };
+
   const handleSubmit = async () => {
-    const token = Cookies.get('accessToken'); 
+    const token = Cookies.get('accessToken');
     if (!token) {
       console.error('No token found in cookies.');
       return;
     }
+
     const payload = {
-      profilePic: formData.image,
+      profilePic: formData.image ? formData.image : "default-profile-picture-url", 
+      weight: Number(formData.weight),
+      height: Number(formData.height),
       job: formData.job,
-      height: formData.height,
-      weight: formData.weight,
       fitnessLevel: formData.fitnessLevel,
       fitnessGoal: formData.goals.join(', '),
       healthCondition: formData.healthCondition,
       allergy: formData.allergies,
     };
-  
+
     try {
-      const response = await fetch('http://localhost:3001/api/v1/users/me', {
-        method: 'PATCH', 
+      const response = await instance.patch('/api/v1/users/me', payload, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(payload),
       });
-  
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Error updating profile');
-      }
-  
-      const responseData = await response.json();
-      console.log(responseData)
-      console.log('Profile updated:', responseData);
-  
+
+      console.log('Profile updated:', response.data);
       router.push('/traineeProfileUpdated');
     } catch (error) {
-      console.error('Error updating profile:', error.message);
+      console.error('Error updating profile:', error.response?.data || error.message);
     }
   };
 
@@ -163,27 +205,7 @@ export default function TraineeData() {
         </div>
       </div>
 
-      {/* Health & Allergy Section */}
-      <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mb-6'>
-        <div>
-          <label className='block text-gray-700'>Do you have any health conditions?</label>
-          <input
-            type='text'
-            placeholder='Enter health conditions'
-            className='w-full border-b border-gray-300 focus:border-purple-500 focus:outline-none'
-            onChange={(e) => setFormData({ ...formData, healthCondition: e.target.value })}
-          />
-        </div>
-        <div>
-          <label className='block text-gray-700'>Do you have any allergies?</label>
-          <input
-            type='text'
-            placeholder='Enter allergies'
-            className='w-full border-b border-gray-300 focus:border-purple-500 focus:outline-none'
-            onChange={(e) => setFormData({ ...formData, allergies: e.target.value })}
-          />
-        </div>
-      </div>
+    
 
       {/* Fitness Level Section */}
       <h2 className='text-lg font-medium mb-2'>What is your current fitness level?</h2>
@@ -198,12 +220,89 @@ export default function TraineeData() {
           </button>
         ))}
       </div>
+ {/* Health Condition Section */}
+ <div className='mb-6'>
+        <h2 className='text-lg font-medium'>Do you have any health conditions?</h2>
+        <div className='flex gap-4 mt-2'>
+          <button
+            onClick={() => setHasHealthCondition(true)}
+            className={`px-4 py-2 rounded-md border border-gray-300 ${
+              hasHealthCondition ? 'bg-purple-500 text-white' : 'bg-white'
+            }`}
+          >
+            Yes
+          </button>
+          <button
+            onClick={() => setHasHealthCondition(false)}
+            className={`px-4 py-2 rounded-md border border-gray-300 ${
+              !hasHealthCondition ? 'bg-purple-500 text-white' : 'bg-white'
+            }`}
+          >
+            No
+          </button>
+        </div>
+        {hasHealthCondition && (
+          <div className='mt-4'>
+            <input
+              type='text'
+              className='w-full border-b border-gray-300 focus:border-purple-500 focus:outline-none mb-2'
+              placeholder='Add health condition'
+              value={newHealthCondition}
+              onChange={(e) => setNewHealthCondition(e.target.value)}
+            />
+            <button
+              onClick={handleAddHealthCondition}
+              className='px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600'
+            >
+              Add Health Condition
+            </button>
+          </div>
+        )}
+      </div>
 
-      {/* Submit Button */}
+      {/* Allergies Section */}
+      <div className='mb-6'>
+        <h2 className='text-lg font-medium'>Do you have any allergies?</h2>
+        <div className='flex gap-4 mt-2'>
+          <button
+            onClick={() => setHasAllergies(true)}
+            className={`px-4 py-2 rounded-md border border-gray-300 ${
+              hasAllergies ? 'bg-purple-500 text-white' : 'bg-white'
+            }`}
+          >
+            Yes
+          </button>
+          <button
+            onClick={() => setHasAllergies(false)}
+            className={`px-4 py-2 rounded-md border border-gray-300 ${
+              !hasAllergies ? 'bg-purple-500 text-white' : 'bg-white'
+            }`}
+          >
+            No
+          </button>
+        </div>
+        {hasAllergies && (
+          <div className='mt-4'>
+            <input
+              type='text'
+              className='w-full border-b border-gray-300 focus:border-purple-500 focus:outline-none mb-2'
+              placeholder='Add allergy'
+              value={newAllergy}
+              onChange={(e) => setNewAllergy(e.target.value)}
+            />
+            <button
+              onClick={handleAddAllergy}
+              className='px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600'
+            >
+              Add Allergy
+            </button>
+          </div>
+        )}
+      </div>
       <button
         onClick={handleSubmit}
-        className='w-full px-6 py-3 bg-purple-500 text-white rounded-md hover:bg-purple-600'>
-        Submit
+        className='w-full py-3 bg-purple-600 text-white rounded-md shadow-md hover:bg-purple-700'>
+        Update Profile
       </button>
     </div>
   );
