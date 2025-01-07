@@ -22,31 +22,19 @@ export default function TraineeProfileUpdated() {
   const fetchUserData = async () => {
     try {
       const response = await instance.get("/api/v1/users/me");
+      console.log("API Response:", response.data);
       if (response.data) {
-        const {
-          firstName = "",
-          lastName = "",
-          email = "",
-          dateOfBirth = "",
-          profilePhoto = "",
-          gender = "",
-          weight = "",
-          height = "",
-          fitnessLevel = "",
-          goal = "",
-        } = response.data;
-
         setUserData({
-          firstName,
-          lastName,
-          email,
-          birthdate: dateOfBirth,
-          profilePhoto,
-          gender,
-          weight,
-          height,
-          fitnessLevel,
-          goal,
+          firstName: response.data.firstName || "",
+          lastName: response.data.lastName || "",
+          email: response.data.email || "",
+          birthdate: response.data.dateOfBirth || "",
+          profilePhoto: response.data.profilePhoto || "",
+          // gender: response.data.gender || "",
+          // weight: response.data.weight || "",
+          // height: response.data.height || "",
+          // fitnessLevel: response.data.fitnessLevel || "",
+          // goal: response.data.goal || "",
         });
       } else {
         throw new Error("Invalid user data received");
@@ -152,23 +140,24 @@ export default function TraineeProfileUpdated() {
               name="email"
               value={userData.email}
               disabled
-              className="border rounded w-full py-2 px-3 bg-gray-100"
+              className="border text-black rounded w-full py-2 px-3 bg-gray-100"
             />
           </div>
           <div>
-            <label className="block font-bold mb-1">Birthday</label>
-            <input
-              type="date"
-              name="birthdate"
-              value={userData.birthdate ? userData.birthdate.split("T")[0] : ""}
-              onChange={handleChange}
-              disabled={!isEditing}
-              className="border rounded w-full py-2 px-3"
-            />
-          </div>
+  <label className="block font-bold mb-1">Birthday</label>
+  <input
+    type="date"
+    name="birthdate"
+    value={userData.birthdate ? new Date(userData.birthdate).toISOString().split("T")[0] : ""}
+    onChange={handleChange}
+    disabled={!isEditing}
+    className="border rounded w-full py-2 px-3"
+  />
+</div>
+
         </div>
       </div>
-      <div className="bg-white p-4 shadow rounded">
+      {/* <div className="bg-white p-4 shadow rounded">
         <div className="flex justify-between items-center">
           <h3 className="font-bold text-lg">Fitness Information</h3>
         </div>
@@ -229,7 +218,7 @@ export default function TraineeProfileUpdated() {
             />
           </div>
         </div>
-      </div>
+      </div> */}
       {isEditing && (
         <button
           onClick={handleSave}
