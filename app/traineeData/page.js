@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import instance from "../../utils/axios";
-
+import { useSelector } from "react-redux";
 export default function TraineeData() {
   const [formData, setFormData] = useState({
     image: null,
@@ -21,28 +21,56 @@ export default function TraineeData() {
   const [hasHealthCondition, setHasHealthCondition] = useState(false);
   const [hasAllergies, setHasAllergies] = useState(false);
   const [newHealthCondition, setNewHealthCondition] = useState('');
+  const [newHealthConditionDescription, setNewHealthConditionDescription] = useState('');
+  const [newHealthConditionSeverity, setNewHealthConditionSeverity] = useState('');
   const [newAllergy, setNewAllergy] = useState('');
+  const [newAllergyDescription, setNewAllergyDescription] = useState('');
+  const [healthConditions, setHealthConditions] = useState([]); // Array to store multiple health conditions
+  const [allergiesList, setAllergiesList] = useState([]); // Array to store multiple allergies
   const router = useRouter();
+// Define goalsList to render goal options
+const goalsList = [
+  { label: 'Lose Weight', icon: 'https://res.cloudinary.com/dvgqyejfc/image/upload/v1733743102/Frame_1261154795_nhbtvj.png' },
+  { label: 'Gain Muscles', icon: 'https://res.cloudinary.com/dvgqyejfc/image/upload/v1733743110/Frame_1261154796_dpnggh.png' },
+  { label: 'Weight-lifting', icon: 'https://res.cloudinary.com/dvgqyejfc/image/upload/v1733743118/Frame_1261154797_d1husm.png' },
+  { label: 'Diet', icon: 'https://res.cloudinary.com/dvgqyejfc/image/upload/v1733743130/Frame_1261154798_ddkhti.png' },
+  { label: 'Other', icon: 'https://res.cloudinary.com/dvgqyejfc/image/upload/v1733743143/other_comp_wbwndw.png' },
+];
 
-  const goalsList = [
-    { label: 'Lose Weight', icon: 'https://res.cloudinary.com/dvgqyejfc/image/upload/v1733743102/Frame_1261154795_nhbtvj.png' },
-    { label: 'Gain Muscles', icon: 'https://res.cloudinary.com/dvgqyejfc/image/upload/v1733743110/Frame_1261154796_dpnggh.png' },
-    { label: 'Weight-lifting', icon: 'https://res.cloudinary.com/dvgqyejfc/image/upload/v1733743118/Frame_1261154797_d1husm.png' },
-    { label: 'Diet', icon: 'https://res.cloudinary.com/dvgqyejfc/image/upload/v1733743130/Frame_1261154798_ddkhti.png' },
-    { label: 'Other', icon: 'https://res.cloudinary.com/dvgqyejfc/image/upload/v1733743143/other_comp_wbwndw.png' },
-  ];
-  const fitnessLevels = ['Beginner', 'Intermediate', 'Advanced'];
-  const heights = Array.from({ length: 71 }, (_, i) => 150 + i);
-  const weights = Array.from({ length: 101 }, (_, i) => 40 + i);
+const fitnessLevels = ['Beginner', 'Intermediate', 'Advanced'];
+const heights = Array.from({ length: 51 }, (_, i) => 150 + i);
+const weights = Array.from({ length: 161 }, (_, index) => 40 + index);
 
+const userData = useSelector((state) => state.user.userData);
+// Log userData to the console
+console.log("User Data from Redux:", userData);
+const toggleGoal = (goal) => {
+  setFormData((prev) => ({
+    ...prev,
+    goals: [goal], 
+  }));
+};
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const healthResponse = await instance.get('/api/v1/health-conditions');
+        const token = Cookies.get('accessToken');
+        if (!userData || !token) {
+          console.error("User not logged in or token missing.");
+          return;
+        }
+    
+const url = `/api/v1/health-conditions`; 
+console.log(`Requesting from: ${url} with token: ${token}`);
+const healthResponse = await instance.get(url, {
+  headers: { Authorization: `Bearer ${token}` },
+
+        });
         setHealthConditions(healthResponse.data.healthConditions);
 
-        const allergyResponse = await instance.get('/api/v1/allergies');
-        setAllergiesList(allergyResponse.data.allergy);
+        const allergyResponse = await instance.get(`/api/v1/allergies/${userData._id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setAllergiesList(allergyResponse.data.allergies);
       } catch (error) {
         console.error('Error fetching health conditions or allergies:', error);
       }
@@ -59,64 +87,87 @@ export default function TraineeData() {
     }
   };
 
-  const toggleGoal = (goal) => {
-    setFormData((prev) => {
-      const updatedGoals = prev.goals.includes(goal)
-        ? prev.goals.filter((g) => g !== goal)
-        : [...prev.goals, goal];
-      return { ...prev, goals: updatedGoals };
-    });
-  };
-
-  // const toggleSelection = (id, type) => {
-  //   setFormData((prev) => {
-  //     const updatedSelection = prev[type].includes(id)
-  //       ? prev[type].filter((item) => item !== id)
-  //       : [...prev[type], id];
-  //     return { ...prev, [type]: updatedSelection };
-  //   });
-  // };
-
   const handleAddHealthCondition = async () => {
-    if (!newHealthCondition) return;
+    const token = Cookies.get('accessToken');
+    if (!newHealthCondition || !newHealthConditionDescription || !newHealthConditionSeverity || !token) return;
+
     try {
-      const response = await instance.post('/api/v1/health-conditions', { name: newHealthCondition });
-      setHealthConditions([...healthConditions, response.data.healthCondition]);
+      const newCondition = {
+        name: newHealthCondition,
+        description: newHealthConditionDescription,
+        severity: newHealthConditionSeverity,
+      };
+
+      const response = await instance.post(
+        '/api/v1/health-conditions',
+        newCondition, 
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      setHealthConditions((prev) => [...prev, response.data.healthCondition]);
       setNewHealthCondition('');
+      setNewHealthConditionDescription('');
+      setNewHealthConditionSeverity('');
     } catch (error) {
       console.error('Error adding new health condition:', error);
     }
   };
 
   const handleAddAllergy = async () => {
-    if (!newAllergy) return;
+    const token = Cookies.get('accessToken');
+    if (!newAllergy || !newAllergyDescription || !token) return;
+
     try {
-      const response = await instance.post('/api/v1/allergies', { name: newAllergy });
-      setAllergiesList([...allergiesList, response.data.allergy]);
-      setNewAllergy('');
+      const newAllergyData = {
+        name: newAllergy,
+        description: newAllergyDescription,
+      };
+
+      const response = await instance.post(
+        `/api/v1/allergies/${userData._id}`,
+        newAllergyData, 
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+    
+      setAllergiesList((prev) => [...prev, response.data.allergy]); // Adjust response key if needed
+      setNewAllergy("");
+      setNewAllergyDescription("");
     } catch (error) {
-      console.error('Error adding new allergy:', error);
+      console.error("Error adding allergy:", error);
     }
   };
 
   const handleSubmit = async () => {
     const token = Cookies.get('accessToken');
+  
     if (!token) {
       console.error('No token found in cookies.');
       return;
     }
-
+  
     const payload = {
-      profilePic: formData.image ? formData.image : "default-profile-picture-url", 
+      profilePic: formData.image || "default-profile-picture-url",
       weight: Number(formData.weight),
       height: Number(formData.height),
       job: formData.job,
       fitnessLevel: formData.fitnessLevel,
-      fitnessGoal: formData.goals.join(', '),
-      healthCondition: formData.healthCondition,
-      allergy: formData.allergies,
+      fitnessGoal: formData.goals[0], // Assuming only one goal is allowed
+      healthCondition: healthConditions.map((condition) => ({
+        name: condition.name,
+        description: condition.description || '',
+        severity: condition.severity || '',
+      })),
+      allergy: allergiesList.map((allergy) => ({
+        name: allergy.name,
+        description: allergy.description || '',
+      })),
     };
-
+  
     try {
       const response = await instance.patch('/api/v1/users/me', payload, {
         headers: {
@@ -124,13 +175,14 @@ export default function TraineeData() {
           Authorization: `Bearer ${token}`,
         },
       });
-
+  
       console.log('Profile updated:', response.data);
       router.push('/traineeProfileUpdated');
     } catch (error) {
       console.error('Error updating profile:', error.response?.data || error.message);
     }
   };
+  
 
   return (
     <div className='p-8 max-w-4xl mx-auto bg-white rounded-lg shadow-lg'>
@@ -182,15 +234,18 @@ export default function TraineeData() {
           />
         </div>
         <div>
-          <label className='block text-gray-700'>What is your height?</label>
-          <select
-            className='mt-1 w-full border-b border-gray-300 focus:border-purple-500 focus:outline-none'
-            onChange={(e) => setFormData({ ...formData, height: e.target.value })}>
-            <option value=''>Choose your height</option>
-            {heights.map((h) => (
-              <option key={h} value={h}>{`${h} cm`}</option>
-            ))}
-          </select>
+        <label className='block text-gray-700'>What is your height?</label>
+<select
+  className='mt-1 w-full border-b border-gray-300 focus:border-purple-500 focus:outline-none'
+  value={formData.height} // To keep the selected value
+  onChange={(e) => setFormData({ ...formData, height: e.target.value })} // Update the formData when height changes
+>
+  <option value=''>Choose your height</option>
+  {heights.map((h) => (
+    <option key={h} value={h}>{`${h} cm`}</option> // Display height options as cm
+  ))}
+</select>
+
         </div>
         <div>
           <label className='block text-gray-700'>What is your weight?</label>

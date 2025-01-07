@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { useDispatch } from "react-redux";
-import { setUserData } from "../../Redux/userSlice"; // Action to store user data
+import { setUserData } from "../../Redux/userSlice"; 
 import Cookies from "js-cookie";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -87,10 +87,10 @@ const SignUpPage = () => {
         const { accessToken, refreshToken, user } = response.data.data || {};
 
         if (accessToken) {
-          Cookies.set("accessToken", accessToken, { expires: 1 }); // Token expires in 1 day
+          Cookies.set("accessToken", accessToken, { expires: 1 });
         }
         if (refreshToken) {
-          Cookies.set("refreshToken", refreshToken, { expires: 7 }); // Refresh token expires in 7 days
+          Cookies.set("refreshToken", refreshToken, { expires: 7 });
         }
 
       

@@ -45,7 +45,7 @@ export default function Login() {
         Cookies.set("accessToken", data.data.accessToken, { expires: 1 / 24 }); // 1 hour
         Cookies.set("refreshToken", data.data.refreshToken, { expires: 7 }); // 7 days
 
-        
+        instance.defaults.headers['Authorization'] = `Bearer ${data.data.accessToken}`;
         dispatch(setUserData(data.data.user));
 
       

@@ -1,32 +1,21 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import instance from "../utils/axios"; 
 import Cookies from "js-cookie";
 
 export const fetchUserData = createAsyncThunk(
   "user/fetchUserData",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await fetch("http://localhost:3001/api/v1/auth/me", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${Cookies.get("accessToken")}`, 
-        },
-      });
+      const response = await instance.get("/api/v1/users/me");
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch user data.");
-      }
+      const { user, accessToken, refreshToken } = response.data.data;
 
-      const responseData = await response.json();
+      // if (accessToken && refreshToken) {
+      //   Cookies.set("accessToken", accessToken, { expires: 1 / 24 }); 
+      //   Cookies.set("refreshToken", refreshToken, { expires: 7 }); 
+      // }
 
-     
-      const { user, accessToken, refreshToken } = responseData.data;
-
-      if (accessToken && refreshToken) {
-        Cookies.set("accessToken", accessToken, { expires: 1 / 24 }); 
-        Cookies.set("refreshToken", refreshToken, { expires: 7 });
-      }
-
-      return user; 
+      return user;
     } catch (error) {
       return rejectWithValue(error.message);
     }
