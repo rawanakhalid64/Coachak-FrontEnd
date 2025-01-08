@@ -2,7 +2,7 @@
 'use client'
 import React, { useState } from 'react';
 import instance from "../../utils/axios";
-
+import { useRouter } from 'next/router';
 
 const CreateProfileTrainer = () => {
   const [formData, setFormData] = useState({
@@ -65,15 +65,11 @@ const CreateProfileTrainer = () => {
         profilePic: formData.profilePic,
       };
   
-      // Include the token in the headers
-      // const config = {
-      //   headers: {
-      //     Authorization: `Bearer ${}`,
-      //   },
-      // };
+     
   
       await instance.patch('/api/v1/users/me', payload);
       alert('Profile updated successfully!');
+      router.push('/TrainerDataUpdated');
     } catch (error) {
       console.error('Error updating profile:', error);
       alert('Failed to update profile. Please try again.');
