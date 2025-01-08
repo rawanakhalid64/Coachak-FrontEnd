@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import instance from "../../utils/axios";
 
+
 export default function TraineeProfileUpdated() {
   const [userData, setUserData] = useState({
     firstName: "",
@@ -23,18 +24,23 @@ export default function TraineeProfileUpdated() {
     try {
       const response = await instance.get("/api/v1/users/me");
       console.log("API Response:", response.data);
-      if (response.data) {
+
+      if (response.data && response.data.user) {
+        const user = response.data.user;
+
+
         setUserData({
-          firstName: response.data.firstName || "",
-          lastName: response.data.lastName || "",
-          email: response.data.email || "",
-          birthdate: response.data.dateOfBirth || "",
-          profilePhoto: response.data.profilePhoto || "",
-          // gender: response.data.gender || "",
-          // weight: response.data.weight || "",
-          // height: response.data.height || "",
-          // fitnessLevel: response.data.fitnessLevel || "",
-          // goal: response.data.goal || "",
+          firstName: user.firstName || "N/A",
+          lastName: user.lastName || "N/A",
+          email: user.email || "N/A",
+          birthdate: user.dateOfBirth || "N/A",
+          profilePhoto:
+            user.profilePhoto ||
+            "https://via.placeholder.com/150", 
+          weight: user.weight ? `${user.weight} kg` : "Not provided",
+          height: user.height ? `${user.height} cm` : "Not provided",
+          fitnessLevel: user.fitnessLevel || "Not specified",
+          goal: user.fitnessGoal || "No goal set",
         });
       } else {
         throw new Error("Invalid user data received");
@@ -42,7 +48,7 @@ export default function TraineeProfileUpdated() {
     } catch (error) {
       console.error("Error fetching user data:", error);
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); 
     }
   };
 
@@ -52,14 +58,41 @@ export default function TraineeProfileUpdated() {
 
   const handleSave = async () => {
     try {
-      const response = await instance.patch("/api/v1/users/me", userData);
-      setUserData(response.data);
-      setIsEditing(false);
+      // Prepare the data for the PATCH request
+      const preparedData = {
+        ...userData,
+        weight: userData.weight ? parseInt(userData.weight.replace(" kg", "")) : null, // Remove " kg" and parse as number
+        height: userData.height ? parseInt(userData.height.replace(" cm", "")) : null, // Remove " cm" and parse as number
+        birthdate: userData.birthdate
+          ? new Date(userData.birthdate).toISOString()
+          : null, // Convert to ISO string if birthdate exists
+      };
+  
+      console.log("Prepared Data:", preparedData); // Debug the prepared data
+  
+      // Send the PATCH request
+      const response = await instance.patch("/api/v1/users/me", preparedData);
+  
+      if (response.data && response.data.user) {
+        setUserData({
+          ...response.data.user,
+          weight: response.data.user.weight
+            ? `${response.data.user.weight} kg`
+            : "Not provided", // Add unit back for UI display
+          height: response.data.user.height
+            ? `${response.data.user.height} cm`
+            : "Not provided", // Add unit back for UI display
+          birthdate: response.data.user.birthdate || "", // Ensure birthdate is updated
+        });
+        setIsEditing(false);
+      } else {
+        throw new Error("Error saving user data");
+      }
     } catch (error) {
       console.error("Error updating user data:", error);
     }
   };
-
+  
   const handleChange = (e) => {
     const { name, value } = e.target;
     setUserData((prev) => ({ ...prev, [name]: value }));
@@ -70,6 +103,7 @@ export default function TraineeProfileUpdated() {
   }, []);
 
   if (isLoading) return <div>Loading...</div>;
+
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -146,23 +180,27 @@ export default function TraineeProfileUpdated() {
           <div>
   <label className="block font-bold mb-1">Birthday</label>
   <input
-    type="date"
-    name="birthdate"
-    value={userData.birthdate ? new Date(userData.birthdate).toISOString().split("T")[0] : ""}
-    onChange={handleChange}
-    disabled={!isEditing}
-    className="border rounded w-full py-2 px-3"
-  />
+  type="date"
+  name="birthdate"
+  value={
+    userData.birthdate
+      ? new Date(userData.birthdate).toISOString().split("T")[0]
+      : ""
+  }
+  onChange={(e) => handleChange(e)}
+  disabled={!isEditing}
+  className="border rounded w-full py-2 px-3"
+/>
 </div>
 
         </div>
       </div>
-      {/* <div className="bg-white p-4 shadow rounded">
+      <div className="bg-white p-4 shadow rounded">
         <div className="flex justify-between items-center">
           <h3 className="font-bold text-lg">Fitness Information</h3>
         </div>
         <div className="grid grid-cols-2 gap-4 mt-4">
-          <div>
+          {/* <div>
             <label className="block font-bold mb-1">Gender</label>
             <input
               type="text"
@@ -172,7 +210,7 @@ export default function TraineeProfileUpdated() {
               disabled={!isEditing}
               className="border rounded w-full py-2 px-3"
             />
-          </div>
+          </div> */}
           <div>
             <label className="block font-bold mb-1">Weight</label>
             <input
@@ -218,7 +256,7 @@ export default function TraineeProfileUpdated() {
             />
           </div>
         </div>
-      </div> */}
+      </div>
       {isEditing && (
         <button
           onClick={handleSave}
