@@ -42,8 +42,8 @@ export default function Login() {
         console.log("Login successful");
 
       
-        Cookies.set("accessToken", data.data.accessToken, { expires: 1 / 24 }); // 1 hour
-        Cookies.set("refreshToken", data.data.refreshToken, { expires: 7 }); // 7 days
+        Cookies.set("accessToken", data.data.accessToken, { expires: 5 / 24 }); 
+        Cookies.set("refreshToken", data.data.refreshToken, { expires: 7 }); 
 
         instance.defaults.headers['Authorization'] = `Bearer ${data.data.accessToken}`;
         dispatch(setUserData(data.data.user));
@@ -53,7 +53,7 @@ export default function Login() {
         if (role === "trainer") {
           router.push("/TrainerDataCreation");
         } else if (role === "client") {
-          router.push("/traineeData");
+          router.push("/traineeProfileUpdated");
         } else {
           router.push("/login");
         }

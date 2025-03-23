@@ -3,23 +3,22 @@ import Cookies from 'js-cookie';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
 
-// Create an Axios instance
 const instance = axios.create({
   baseURL: BASE_URL,
   withCredentials: true,
 });
 
-// Flag to prevent multiple refresh requests
+
 let isRefreshing = false;
 let refreshSubscribers = [];
 
-// Notify subscribers with the new token
+
 const onTokenRefreshed = (newAccessToken) => {
   refreshSubscribers.forEach((callback) => callback(newAccessToken));
   refreshSubscribers = [];
 };
 
-// Add a subscriber
+
 const addRefreshSubscriber = (callback) => {
   refreshSubscribers.push(callback);
 };
@@ -34,15 +33,75 @@ const getRefreshToken = async (refreshToken) => {
   }
 };
 
-// Request interceptor to add the access token to the headers or refresh it if missing
+
+// instance.interceptors.request.use(
+//   async (config) => {
+//     // Exclude sign-up and login routes from requiring authentication
+//     const urlPath = new URL(config.url, BASE_URL).pathname;
+
+//     if (urlPath === "/api/v1/auth/signup" || urlPath === "/api/v1/auth/login") {
+//       return config;
+//     }
+    
+
+//     let token = Cookies.get("accessToken");
+
+//     if (!token) {
+//       const refreshToken = Cookies.get("refreshToken");
+//       if (!refreshToken) {
+//         throw new Error("No accessToken or refreshToken available. User must log in.");
+//       }
+
+//       if (!isRefreshing) {
+//         isRefreshing = true;
+
+//         try {
+//           const refreshResponse = await getRefreshToken(refreshToken);
+//           const newAccessToken = refreshResponse.data.accessToken;
+
+//           Cookies.set("accessToken", newAccessToken, { expires: 5 / 24 });
+//           onTokenRefreshed(newAccessToken);
+
+//           token = newAccessToken;
+//         } catch (refreshError) {
+//           console.error("Error refreshing token:", refreshError);
+//           isRefreshing = false;
+//           throw refreshError;
+//         }
+
+//         isRefreshing = false;
+//       } else {
+//         await new Promise((resolve) =>
+//           addRefreshSubscriber((newAccessToken) => {
+//             token = newAccessToken;
+//             resolve();
+//           })
+//         );
+//       }
+//     }
+
+//     if (token) {
+//       config.headers["Authorization"] = `Bearer ${token}`;
+//     }
+
+//     return config;
+//   },
+//   (error) => Promise.reject(error)
+// );
 instance.interceptors.request.use(
   async (config) => {
-    let token = Cookies.get('accessToken');
+    const urlPath = new URL(config.url, BASE_URL).pathname;
+
+    if (urlPath === "/api/v1/auth/signup" || urlPath === "/api/v1/auth/login") {
+      return config;
+    }
+
+    let token = Cookies.get("accessToken"); 
 
     if (!token) {
-      const refreshToken = Cookies.get('refreshToken');
+      const refreshToken = Cookies.get("refreshToken"); 
       if (!refreshToken) {
-        throw new Error('No accessToken or refreshToken available. User must log in.');
+        throw new Error("No accessToken or refreshToken available. User must log in.");
       }
 
       if (!isRefreshing) {
@@ -52,22 +111,18 @@ instance.interceptors.request.use(
           const refreshResponse = await getRefreshToken(refreshToken);
           const newAccessToken = refreshResponse.data.accessToken;
 
-          // Update the access token in cookies
-          Cookies.set('accessToken', newAccessToken, { expires: 1 / 24 });
-
-          // Notify all subscribers with the new token
+          Cookies.set("accessToken", newAccessToken, { expires: 5 / 24 });
           onTokenRefreshed(newAccessToken);
 
           token = newAccessToken;
         } catch (refreshError) {
-          console.error('Error refreshing token:', refreshError);
+          console.error("Error refreshing token:", refreshError);
           isRefreshing = false;
           throw refreshError;
         }
 
         isRefreshing = false;
       } else {
-        // Wait for the token refresh to complete
         await new Promise((resolve) =>
           addRefreshSubscriber((newAccessToken) => {
             token = newAccessToken;
@@ -78,13 +133,14 @@ instance.interceptors.request.use(
     }
 
     if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+      config.headers["Authorization"] = `Bearer ${token}`;
     }
 
     return config;
   },
   (error) => Promise.reject(error)
 );
+
 
 // Response interceptor to handle errors and refresh token if expired
 instance.interceptors.response.use(

@@ -2,9 +2,10 @@
 'use client'
 import React, { useState } from 'react';
 import instance from "../../utils/axios";
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 
 const CreateProfileTrainer = () => {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     bio: '',
     areasOfExpertise: '',

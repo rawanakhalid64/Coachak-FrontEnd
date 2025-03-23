@@ -1,20 +1,22 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import instance from "../utils/axios"; 
+import instance from "../utils/axios";
 import Cookies from "js-cookie";
+import { persistReducer } from "redux-persist";
+import storage from "redux-persist/lib/storage";
 
 export const fetchUserData = createAsyncThunk(
   "user/fetchUserData",
   async (_, { rejectWithValue }) => {
     try {
       const response = await instance.get("/api/v1/users/me");
-
+      
       const { user, accessToken, refreshToken } = response.data.data;
-
+      
       // if (accessToken && refreshToken) {
-      //   Cookies.set("accessToken", accessToken, { expires: 1 / 24 }); 
-      //   Cookies.set("refreshToken", refreshToken, { expires: 7 }); 
+      //   Cookies.set("accessToken", accessToken, { expires: 1 / 24 });
+      //   Cookies.set("refreshToken", refreshToken, { expires: 7 });
       // }
-
+      
       return user;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -54,5 +56,15 @@ const userSlice = createSlice({
   },
 });
 
+
+const persistConfig = {
+  key: 'user',
+  storage,
+  whitelist: ['userData'] 
+};
+
+
+const persistedUserReducer = persistReducer(persistConfig, userSlice.reducer);
+
 export const { setUserData, clearUserData } = userSlice.actions;
-export default userSlice.reducer;
+export default persistedUserReducer;

@@ -87,7 +87,7 @@ const SignUpPage = () => {
         const { accessToken, refreshToken, user } = response.data.data || {};
 
         if (accessToken) {
-          Cookies.set("accessToken", accessToken, { expires: 1 });
+          Cookies.set("accessToken", accessToken, { expires:  5 / 24});
         }
         if (refreshToken) {
           Cookies.set("refreshToken", refreshToken, { expires: 7 });
