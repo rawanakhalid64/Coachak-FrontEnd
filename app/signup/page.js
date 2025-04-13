@@ -77,6 +77,7 @@ const SignUpPage = () => {
       return;
     }
     try {
+      console.log("Submitting form data:", formData);
       const response = await instance.post("/api/v1/auth/register", formData);
 
       if (response.status === 201) {
@@ -324,9 +325,9 @@ const SignUpPage = () => {
               <div className="flex items-center">
                 <input
                   type="radio"
-                  id="client"
+                  id="trainee"
                   name="role"
-                  value="client"
+                  value="trainee"
                   // checked={formData.role === 'trainee'}
                   onChange={handleInputChange}
                   className="text-black"

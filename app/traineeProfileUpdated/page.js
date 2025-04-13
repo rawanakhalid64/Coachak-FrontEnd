@@ -1,4 +1,4 @@
-"use client";
+'use client'
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import instance from "../../utils/axios";
@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import SidebarLayout from "../../components/SidebarLayout/SidebarLayout";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUserData } from "../../Redux/userSlice";
+import Cookies from 'js-cookie';
 
 export default function TraineeProfileUpdated() {
-  const router = useRouter();
   const dispatch = useDispatch();
   const userDataState = useSelector(state => state.user.userData);
   const isLoading = useSelector(state => state.user.isLoading);
@@ -30,24 +30,19 @@ export default function TraineeProfileUpdated() {
   const [isEditing, setIsEditing] = useState(false);
   const [activeSection, setActiveSection] = useState("personal");
   
-  // For storing the object's name properties
   const [healthConditionNames, setHealthConditionNames] = useState([]);
   const [allergyNames, setAllergyNames] = useState([]);
 
-  // Fetch user data from Redux or API if not available
   useEffect(() => {
     if (!userDataState) {
       dispatch(fetchUserData());
     } else {
-      // Initialize local state from Redux
       setUserData({
         firstName: userDataState.firstName || "N/A",
         lastName: userDataState.lastName || "N/A",
         email: userDataState.email || "N/A",
         birthdate: userDataState.dateOfBirth || "N/A",
-        profilePhoto:
-          userDataState.profilePhoto ||
-          "https://via.placeholder.com/150",
+        profilePhoto: userDataState.profilePhoto || "https://via.placeholder.com/150",
         weight: userDataState.weight ? `${userDataState.weight} kg` : "Not provided",
         height: userDataState.height ? `${userDataState.height} cm` : "Not provided",
         fitnessLevel: userDataState.fitnessLevel || "Not specified",
@@ -57,7 +52,6 @@ export default function TraineeProfileUpdated() {
         allergy: userDataState.allergy || []
       });
       
-      // Fetch health condition and allergy names if available
       if (userDataState.healthCondition && userDataState.healthCondition.length > 0) {
         fetchHealthConditionNames(userDataState.healthCondition);
       }
@@ -68,18 +62,43 @@ export default function TraineeProfileUpdated() {
     }
   }, [userDataState, dispatch]);
   
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const token = Cookies.get('accessToken');
+      const response = await instance.post('/api/v1/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      let imageUrl = response.data?.data;
+      
+      if (imageUrl) {
+        setUserData(prev => ({ ...prev, profilePhoto: imageUrl }));
+        await instance.patch("/api/v1/users/me", { profilePhoto: imageUrl });
+        dispatch(fetchUserData());
+      } else {
+        console.error("No image URL found in response:", response.data);
+      }
+    } catch (error) {
+      console.error("Error uploading image:", error);
+    }
+  };
 
   const fetchHealthConditionNames = async (healthConditionIds) => {
     try {
       const response = await instance.get(`/api/v1/health-conditions`);
-      
-      // Access the healthConditions array from the response
       const healthConditionsArray = response.data.healthConditions || [];
-      
       const healthConditions = healthConditionsArray.filter(condition => 
         healthConditionIds.includes(condition._id || condition.id)
       );
-      
       const names = healthConditions.map(condition => condition.name || "Unknown condition");
       setHealthConditionNames(names);
     } catch (error) {
@@ -87,17 +106,14 @@ export default function TraineeProfileUpdated() {
       setHealthConditionNames(healthConditionIds.map(() => "Unknown condition"));
     }
   };
+
   const fetchAllergyNames = async (allergyIds) => {
     try {
       const response = await instance.get(`/api/v1/allergies`);
-      
-      
       const allergiesArray = response.data.allergies || [];
-      
       const allergies = allergiesArray.filter(allergy => 
         allergyIds.includes(allergy._id || allergy.id)
       );
-      
       const names = allergies.map(allergy => allergy.name || "Unknown allergy");
       setAllergyNames(names);
     } catch (error) {
@@ -113,7 +129,6 @@ export default function TraineeProfileUpdated() {
 
   const handleSave = async () => {
     try {
-      // Prepare the data for the PATCH request
       const preparedData = {
         ...userData,
         weight: userData.weight ? parseInt(userData.weight.replace(" kg", "")) : null,
@@ -123,9 +138,6 @@ export default function TraineeProfileUpdated() {
           : null,
       };
   
-      console.log("Prepared Data:", preparedData);
-  
-      // Send the PATCH request
       const response = await instance.patch("/api/v1/users/me", preparedData);
   
       if (response.data && response.data.user) {
@@ -140,8 +152,6 @@ export default function TraineeProfileUpdated() {
           birthdate: response.data.user.birthdate || "",
         });
         setIsEditing(false);
-        
-        // Refresh Redux state
         dispatch(fetchUserData());
       } else {
         throw new Error("Error saving user data");
@@ -154,10 +164,6 @@ export default function TraineeProfileUpdated() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setUserData((prev) => ({ ...prev, [name]: value }));
-  };
-  
-  const handleNavigation = (route) => {
-    router.push(route);
   };
 
   if (isLoading) return <SidebarLayout><div>Loading...</div></SidebarLayout>;
@@ -180,14 +186,21 @@ export default function TraineeProfileUpdated() {
     return `${date.getDate()} ${date.toLocaleString('default', { month: 'long' })} ${date.getFullYear()}`;
   };
 
-  // The component content without the sidebar
-  const profileContent = (
-    <>
+  const handleChangePhoto = () => {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.onchange = handleImageUpload;
+    fileInput.click();
+  };
+
+  return (
+    <SidebarLayout>
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center">
           <h1 className="text-2xl font-bold">Edit Profile</h1>
           <button 
-            onClick={() => handleNavigation('/traineeProfileView')}
+            onClick={() => window.location.href = '/traineeProfileView'}
             className="ml-4 flex items-center bg-red-400 hover:bg-red-600 text-white px-4 py-2 rounded-md transition-colors duration-200"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -234,34 +247,29 @@ export default function TraineeProfileUpdated() {
         </div>
       </div>
 
-      {/* Profile Header */}
       <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
         <div className="flex items-center">
           <div className="w-32 h-32 bg-gray-100 rounded-lg overflow-hidden mr-6">
-            <Image
-              src={
-                userData.profilePhoto ||
-                "https://via.placeholder.com/150"
-              }
-              alt="Profile"
-              width={150}
-              height={150}
+            <img
+              src={userData.profilePhoto || "https://via.placeholder.com/150"}
+              alt={`${userData.firstName}'s profile`}
               className="object-cover w-full h-full"
-              unoptimized
             />
           </div>
           <div>
             <h2 className="text-xl font-bold">{userData.firstName} {userData.lastName}</h2>
             <p className="text-gray-600">{getAge(userData.birthdate)} years old</p>
             <p className="text-gray-600">{userData.job}</p>
-            <button className="mt-3 px-4 py-2 bg-[#B46B6B] text-white rounded-md">
+            <button 
+              onClick={handleChangePhoto}
+              className="mt-3 px-4 py-2 bg-[#B46B6B] text-white rounded-md"
+            >
               Change Photo
             </button>
           </div>
         </div>
       </div>
 
-      {/* Personal Information */}
       <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-bold">Personal Information</h3>
@@ -338,7 +346,6 @@ export default function TraineeProfileUpdated() {
         </div>
       </div>
 
-      {/* Fitness Information */}
       <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-bold">Fitness Information</h3>
@@ -401,7 +408,6 @@ export default function TraineeProfileUpdated() {
         </div>
       </div>
 
-      {/* Health Information */}
       <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-bold">Health Information</h3>
@@ -466,7 +472,6 @@ export default function TraineeProfileUpdated() {
         </div>
       </div>
 
-      {/* Save Button */}
       {isEditing && (
         <div className="mt-6 flex justify-center">
           <button
@@ -477,13 +482,6 @@ export default function TraineeProfileUpdated() {
           </button>
         </div>
       )}
-    </>
-  );
-
-  // Render the profile content within the sidebar layout
-  return (
-    <SidebarLayout>
-      {profileContent}
     </SidebarLayout>
   );
 }

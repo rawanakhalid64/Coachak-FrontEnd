@@ -1,28 +1,29 @@
-// ClientLayout.js
+
 "use client";
 
-import ReduxProvider from "../components/ReduxProvider/ReduxProvider";
-import AppWrapper from "../components/AddWrapper/AddWrapper";
 import { PersistGate } from "redux-persist/integration/react";
-import { persistor } from "../Redux/store";
+import { useStore } from "react-redux";
+import { persistStore } from "redux-persist";
 import { useEffect, useState } from "react";
 
 export default function ClientLayout({ children }) {
-  const [isClient, setIsClient] = useState(false);
+  const store = useStore();
+  const [persistor, setPersistor] = useState(null);
 
   useEffect(() => {
-    setIsClient(true);
-  }, []);
+    
+    setPersistor(persistStore(store));
+  }, [store]);
 
   return (
-    <ReduxProvider>
-      {isClient && persistor ? (
+    <>
+      {persistor ? (
         <PersistGate loading={null} persistor={persistor}>
-          <AppWrapper>{children}</AppWrapper>
+          {children}
         </PersistGate>
       ) : (
-        <AppWrapper>{children}</AppWrapper>
+        children
       )}
-    </ReduxProvider>
+    </>
   );
 }

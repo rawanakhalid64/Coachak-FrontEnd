@@ -27,7 +27,7 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
 
-    const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
+    const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://coachak-backendend.onrender.com";
 
     try {
       console.log("Making request to:", `${BASE_URL}/api/v1/auth/login`);
@@ -53,7 +53,7 @@ export default function Login() {
         if (role === "trainer") {
           router.push("/TrainerDataCreation");
         } else if (role === "client") {
-          router.push("/traineeProfileUpdated");
+          router.push("/traineeData");
         } else {
           router.push("/login");
         }

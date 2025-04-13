@@ -17,6 +17,7 @@ export default function TraineeData() {
     fitnessLevel: '',
     healthCondition: [],
     allergies: [],
+    job: '',
   });
   const [preview, setPreview] = useState(null);
   const [newHealthCondition, setNewHealthCondition] = useState('');
@@ -28,6 +29,7 @@ export default function TraineeData() {
   const [showWeightDropdown, setShowWeightDropdown] = useState(false);
   const [showWeightUnit, setShowWeightUnit] = useState('Kg');
   const [showHeightDropdown, setShowHeightDropdown] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const router = useRouter();
 
   const weightDropdownRef = useRef(null);
@@ -35,10 +37,8 @@ export default function TraineeData() {
 
   const fitnessLevels = ['Beginner', 'Intermediate', 'Advanced'];
   
-  
   const weights = Array.from({ length: 111 }, (_, i) => 40 + i);
   
- 
   const heights = Array.from({ length: 51 }, (_, i) => 150 + i);
   
   const userData = useSelector((state) => state.user.userData);
@@ -47,8 +47,6 @@ export default function TraineeData() {
     const fetchData = async () => {
       try {
         const token = Cookies.get('accessToken');
-        console.log(token)
-        console.log(userData)
         if (!userData || !token) {
           console.error("User not logged in or token missing.");
           return;
@@ -68,7 +66,6 @@ export default function TraineeData() {
 
     fetchData();
 
-   
     const handleClickOutside = (event) => {
       if (weightDropdownRef.current && !weightDropdownRef.current.contains(event.target)) {
         setShowWeightDropdown(false);
@@ -83,6 +80,38 @@ export default function TraineeData() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  const uploadImage = async (file) => {
+    if (!file) return null;
+    
+    try {
+      setIsUploading(true);
+      const token = Cookies.get('accessToken');
+      if (!token) {
+        console.error('No token found in cookies.');
+        return null;
+      }
+      
+      const formData = new FormData();
+      formData.append('file', file); 
+      
+      const response = await instance.post('/api/v1/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      console.log('Image uploaded successfully:', response.data);
+      // Fixed: Using the correct property based on the sample response
+      return response.data.data;
+    } catch (error) {
+      console.error('Error uploading image:', error.response?.data || error.message);
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -112,20 +141,32 @@ export default function TraineeData() {
       return;
     }
 
-    const finalGoal = formData.selectedGoal === 'Other' ? formData.customGoal : formData.selectedGoal;
-
-    const payload = {
-      profilePic: formData.image || "default-profile-picture-url",
-      weight: Number(formData.weight),
-      height: Number(formData.height),
-      job: formData.job,
-      fitnessLevel: formData.fitnessLevel,
-      fitnessGoal: finalGoal,
-      healthCondition: healthConditions,
-      allergy: allergiesList,
-    };
-
     try {
+      // First, upload the image if present
+      let profilePicUrl = null;
+      if (formData.image) {
+        profilePicUrl = await uploadImage(formData.image);
+        if (!profilePicUrl) {
+          console.error('Failed to upload image');
+          // You might want to show an error message to the user here
+          // But we'll continue with the rest of the profile update
+        }
+      }
+
+      const finalGoal = formData.selectedGoal === 'Other' ? formData.customGoal : formData.selectedGoal;
+
+      const payload = {
+        // Only include profilePic if we successfully uploaded an image
+        ...(profilePicUrl && { profilePic: profilePicUrl }),
+        weight: Number(formData.weight),
+        height: Number(formData.height),
+        job: formData.job,
+        fitnessLevel: formData.fitnessLevel,
+        fitnessGoal: finalGoal,
+        healthCondition: healthConditions,
+        allergy: allergiesList,
+      };
+
       const response = await instance.patch('/api/v1/users/me', payload, {
         headers: {
           'Content-Type': 'application/json',
@@ -137,6 +178,7 @@ export default function TraineeData() {
       router.push('/traineeProfileUpdated');
     } catch (error) {
       console.error('Error updating profile:', error.response?.data || error.message);
+      // You may want to add some user feedback here
     }
   };
 
@@ -250,7 +292,11 @@ export default function TraineeData() {
       {/* Profile Picture Upload */}
       <div className='flex justify-center mb-8'>
         <div className='relative w-32 h-32 bg-gray-100 rounded-md flex items-center justify-center'>
-          {preview ? (
+          {isUploading ? (
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-900"></div>
+            </div>
+          ) : preview ? (
             <Image src={preview} alt='Preview' fill className='object-cover rounded-md' />
           ) : (
             <label className='cursor-pointer'>
@@ -259,7 +305,7 @@ export default function TraineeData() {
                   <span className='text-white text-lg'>+</span>
                 </div>
               </div>
-              <input type='file' className='hidden' onChange={handleImageUpload} />
+              <input type='file' accept="image/*" className='hidden' onChange={handleImageUpload} />
             </label>
           )}
         </div>
@@ -520,9 +566,10 @@ export default function TraineeData() {
       <div className='flex justify-end'>
         <button
           onClick={handleSubmit}
-          className='py-3 px-8 bg-purple-900 text-white rounded-md'
+          disabled={isUploading}
+          className={`py-3 px-8 ${isUploading ? 'bg-gray-400' : 'bg-purple-900'} text-white rounded-md`}
         >
-          Next
+          {isUploading ? 'Uploading...' : 'Next'}
         </button>
       </div>
 

@@ -1,9 +1,11 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import instance from "../../utils/axios";
+import { useRouter } from "next/navigation";
+import instance from "../../../../utils/axios";
 
 export default function TrainerProfileUpdated() {
+  const router = useRouter();
   const [trainerData, setTrainerData] = useState({
     firstName: "",
     lastName: "",
@@ -136,6 +138,7 @@ export default function TrainerProfileUpdated() {
       alert('Failed to update profile. Please try again.');
     }
   };
+
   const navigateToViewProfile = () => {
     router.push('/trainer/profile/view');
   };
@@ -144,7 +147,15 @@ export default function TrainerProfileUpdated() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Edit Trainer Profile</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Edit Trainer Profile</h1>
+        <button 
+          onClick={navigateToViewProfile}
+          className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md"
+        >
+          View Profile
+        </button>
+      </div>
       
       {/* Profile Card */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
