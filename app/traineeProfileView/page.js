@@ -1,16 +1,21 @@
 "use client";
-import React, { useEffect } from "react";
-import Image from "next/image";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import SidebarLayout from "../../components/SidebarLayout/SidebarLayout";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUserData } from "../../Redux/userSlice";
+// import Image from "next/image";
 
 export default function TraineeProfileView() {
   const router = useRouter();
   const dispatch = useDispatch();
   const userDataState = useSelector(state => state.user.userData);
   const isLoading = useSelector(state => state.user.isLoading);
+  
+  // State to handle client-side rendering of profile image
+  const [imageLoaded, setImageLoaded] = useState(false);
+  // State to store the profile image URL
+  const [profileImageUrl, setProfileImageUrl] = useState(null);
 
   // Fetch user data from Redux if not available
   useEffect(() => {
@@ -18,6 +23,24 @@ export default function TraineeProfileView() {
       dispatch(fetchUserData());
     }
   }, [userDataState, dispatch]);
+
+  // Check for profile image in localStorage and set it
+  useEffect(() => {
+    // Set imageLoaded to true after hydration is complete
+    setImageLoaded(true);
+    
+    // Check localStorage for uploaded profile image
+    const storedImage = typeof window !== 'undefined' ? localStorage.getItem('uploadedProfileImage') : null;
+    
+    // If there's an image in localStorage, use that
+    if (storedImage) {
+      setProfileImageUrl(storedImage);
+    } 
+    // Otherwise use the one from Redux state if available
+    else if (userDataState?.profilePhoto) {
+      setProfileImageUrl(userDataState.profilePhoto);
+    }
+  }, [userDataState]);
 
   const handleEditProfile = () => {
     router.push('/traineeProfileUpdated');
@@ -64,6 +87,27 @@ export default function TraineeProfileView() {
 
   const bmi = calculateBMI();
 
+  // Simple Profile Image Component to avoid hydration errors
+  const ProfileImage = ({ src }) => {
+    // Only render the actual image after client-side hydration
+    if (!imageLoaded) {
+      return (
+        <div className="w-full h-full bg-gray-200 rounded-lg"></div>
+      );
+    }
+    
+    // Use the profile image URL from state (which could be from localStorage or Redux)
+    const imageUrl = src || profileImageUrl || "https://via.placeholder.com/150";
+    
+    return (
+      <img
+        src={imageUrl}
+        alt="Profile"
+        className="w-full h-full object-cover rounded-lg"
+      />
+    );
+  };
+
   // Profile content
   const profileContent = (
     <div className="max-w-4xl mx-auto">
@@ -87,19 +131,12 @@ export default function TraineeProfileView() {
           <div className="flex flex-col md:flex-row">
             <div className="relative -mt-16 md:mr-6">
               <div className="w-32 h-32 bg-white p-2 rounded-xl shadow-lg">
-                <Image
-                  src={userDataState?.profilePhoto || "https://via.placeholder.com/150"}
-                  alt="Profile"
-                  width={150}
-                  height={150}
-                  className="object-cover w-full h-full rounded-lg"
-                  unoptimized
-                />
+                <ProfileImage />
               </div>
             </div>
             <div className="mt-4 md:mt-0 flex-1">
               <h2 className="text-2xl font-bold text-gray-800 mb-1">
-                {userDataState?.firstName || "N/A"} {userDataState?.lastName || ""}
+                {imageLoaded ? (userDataState?.firstName || "N/A") : "N/A"} {imageLoaded ? (userDataState?.lastName || "") : ""}
               </h2>
               <div className="text-gray-600 mb-4">
                 <p>{getAge(userDataState?.dateOfBirth)} years old • {userDataState?.job || "Not specified"}</p>

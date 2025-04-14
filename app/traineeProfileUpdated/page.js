@@ -1,17 +1,18 @@
 'use client'
 import React, { useState, useEffect } from "react";
-import Image from "next/image";
 import instance from "../../utils/axios";
 import { useRouter } from "next/navigation";
 import SidebarLayout from "../../components/SidebarLayout/SidebarLayout";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUserData } from "../../Redux/userSlice";
-import Cookies from 'js-cookie';
+import ProfileImageUploader from "../../components/ProfileImageUploader/ProfileImageUploader";
+// import ImageDisplay from "../../components/ImageDisplay/ImageDisplay";
 
 export default function TraineeProfileUpdated() {
   const dispatch = useDispatch();
   const userDataState = useSelector(state => state.user.userData);
   const isLoading = useSelector(state => state.user.isLoading);
+  const router = useRouter();
   
   const [userData, setUserData] = useState({
     firstName: "",
@@ -27,13 +28,24 @@ export default function TraineeProfileUpdated() {
     healthCondition: [],
     allergy: []
   });
+  const [displayedImage, setDisplayedImage] = useState(""); // State for displayed image
   const [isEditing, setIsEditing] = useState(false);
   const [activeSection, setActiveSection] = useState("personal");
+  const [isChangingPhoto, setIsChangingPhoto] = useState(false);
   
   const [healthConditionNames, setHealthConditionNames] = useState([]);
   const [allergyNames, setAllergyNames] = useState([]);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
+    // Check for uploaded image URL in localStorage
+    const uploadedProfileImage = localStorage.getItem('uploadedProfileImage');
+    
+    if (uploadedProfileImage) {
+      setDisplayedImage(uploadedProfileImage);
+    }
+    
     if (!userDataState) {
       dispatch(fetchUserData());
     } else {
@@ -42,7 +54,7 @@ export default function TraineeProfileUpdated() {
         lastName: userDataState.lastName || "N/A",
         email: userDataState.email || "N/A",
         birthdate: userDataState.dateOfBirth || "N/A",
-        profilePhoto: userDataState.profilePhoto || "https://via.placeholder.com/150",
+        profilePhoto: userDataState.profilePhoto,
         weight: userDataState.weight ? `${userDataState.weight} kg` : "Not provided",
         height: userDataState.height ? `${userDataState.height} cm` : "Not provided",
         fitnessLevel: userDataState.fitnessLevel || "Not specified",
@@ -51,6 +63,11 @@ export default function TraineeProfileUpdated() {
         healthCondition: userDataState.healthCondition || [],
         allergy: userDataState.allergy || []
       });
+      
+      // Only set displayedImage from userData if no uploaded image was found
+      if (!uploadedProfileImage && userDataState.profilePhoto) {
+        setDisplayedImage(userDataState.profilePhoto);
+      }
       
       if (userDataState.healthCondition && userDataState.healthCondition.length > 0) {
         fetchHealthConditionNames(userDataState.healthCondition);
@@ -61,36 +78,6 @@ export default function TraineeProfileUpdated() {
       }
     }
   }, [userDataState, dispatch]);
-  
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      const token = Cookies.get('accessToken');
-      const response = await instance.post('/api/v1/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
-      let imageUrl = response.data?.data;
-      
-      if (imageUrl) {
-        setUserData(prev => ({ ...prev, profilePhoto: imageUrl }));
-        await instance.patch("/api/v1/users/me", { profilePhoto: imageUrl });
-        dispatch(fetchUserData());
-      } else {
-        console.error("No image URL found in response:", response.data);
-      }
-    } catch (error) {
-      console.error("Error uploading image:", error);
-    }
-  };
 
   const fetchHealthConditionNames = async (healthConditionIds) => {
     try {
@@ -127,6 +114,22 @@ export default function TraineeProfileUpdated() {
     setIsEditing(true);
   };
 
+  const handleChangePhotoClick = () => {
+    setIsChangingPhoto(true);
+  };
+
+  const handleImageChange = (newImageUrl) => {
+    setDisplayedImage(newImageUrl);
+    setUserData(prev => ({ ...prev, profilePhoto: newImageUrl }));
+    // Store in localStorage for persistence
+    localStorage.setItem('uploadedProfileImage', newImageUrl);
+    setIsChangingPhoto(false);
+  };
+
+  const handleCancelPhotoChange = () => {
+    setIsChangingPhoto(false);
+  };
+
   const handleSave = async () => {
     try {
       const preparedData = {
@@ -136,6 +139,8 @@ export default function TraineeProfileUpdated() {
         birthdate: userData.birthdate
           ? new Date(userData.birthdate).toISOString()
           : null,
+        // Add the displayed image URL to the saved profile data
+        profilePhoto: displayedImage
       };
   
       const response = await instance.patch("/api/v1/users/me", preparedData);
@@ -153,6 +158,9 @@ export default function TraineeProfileUpdated() {
         });
         setIsEditing(false);
         dispatch(fetchUserData());
+        
+        // Clear the localStorage after saving
+        localStorage.removeItem('uploadedProfileImage');
       } else {
         throw new Error("Error saving user data");
       }
@@ -166,7 +174,12 @@ export default function TraineeProfileUpdated() {
     setUserData((prev) => ({ ...prev, [name]: value }));
   };
 
-  if (isLoading) return <SidebarLayout><div>Loading...</div></SidebarLayout>;
+  // Guard for server-side rendering
+  if (typeof window === 'undefined') {
+    return <SidebarLayout><div>Loading...</div></SidebarLayout>;
+  }
+
+  if (isLoading || !isMounted) return <SidebarLayout><div>Loading...</div></SidebarLayout>;
 
   const getAge = (birthdate) => {
     if (!birthdate) return "";
@@ -186,12 +199,8 @@ export default function TraineeProfileUpdated() {
     return `${date.getDate()} ${date.toLocaleString('default', { month: 'long' })} ${date.getFullYear()}`;
   };
 
-  const handleChangePhoto = () => {
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = 'image/*';
-    fileInput.onchange = handleImageUpload;
-    fileInput.click();
+  const navigateToProfileView = () => {
+    router.push('/traineeProfileView');
   };
 
   return (
@@ -200,7 +209,7 @@ export default function TraineeProfileUpdated() {
         <div className="flex items-center">
           <h1 className="text-2xl font-bold">Edit Profile</h1>
           <button 
-            onClick={() => window.location.href = '/traineeProfileView'}
+            onClick={navigateToProfileView}
             className="ml-4 flex items-center bg-red-400 hover:bg-red-600 text-white px-4 py-2 rounded-md transition-colors duration-200"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -248,28 +257,59 @@ export default function TraineeProfileUpdated() {
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
-        <div className="flex items-center">
-          <div className="w-32 h-32 bg-gray-100 rounded-lg overflow-hidden mr-6">
-            <img
-              src={userData.profilePhoto || "https://via.placeholder.com/150"}
-              alt={`${userData.firstName}'s profile`}
-              className="object-cover w-full h-full"
-            />
+        <div className="flex flex-col md:flex-row items-center">
+          <div className="mr-6 mb-4 md:mb-0 relative">
+            {isChangingPhoto ? (
+              <div className="flex flex-col items-center">
+                <ProfileImageUploader 
+                  currentImage={displayedImage} 
+                  onImageChange={handleImageChange}
+                  size="md"
+                  editable={true}
+                  useLocalStorage={true} 
+                />
+                <button
+                  onClick={handleCancelPhotoChange}
+                  className="mt-2 text-sm text-gray-600 hover:text-gray-800"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="relative group">
+                <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-200">
+                  {displayedImage ? (
+                    <img 
+                      src={displayedImage} 
+                      alt="Profile" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={handleChangePhotoClick}
+                  className="mt-2 w-full text-center bg-red-400 hover:bg-red-500 text-white text-sm py-1 px-2 rounded transition-colors duration-200"
+                >
+                  Change Photo
+                </button>
+              </div>
+            )}
           </div>
           <div>
             <h2 className="text-xl font-bold">{userData.firstName} {userData.lastName}</h2>
             <p className="text-gray-600">{getAge(userData.birthdate)} years old</p>
             <p className="text-gray-600">{userData.job}</p>
-            <button 
-              onClick={handleChangePhoto}
-              className="mt-3 px-4 py-2 bg-[#B46B6B] text-white rounded-md"
-            >
-              Change Photo
-            </button>
           </div>
         </div>
       </div>
 
+      {/* Personal Information Section */}
       <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-bold">Personal Information</h3>
@@ -284,7 +324,7 @@ export default function TraineeProfileUpdated() {
             </button>
           ) : null}
         </div>
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block font-medium mb-1">First Name</label>
             <input
@@ -346,6 +386,7 @@ export default function TraineeProfileUpdated() {
         </div>
       </div>
 
+      {/* Fitness Information Section */}
       <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-bold">Fitness Information</h3>
@@ -360,7 +401,7 @@ export default function TraineeProfileUpdated() {
             </button>
           ) : null}
         </div>
-        <div className="grid grid-cols-2 gap-6 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
           <div>
             <label className="block font-medium mb-1">Weight</label>
             <input
@@ -408,6 +449,7 @@ export default function TraineeProfileUpdated() {
         </div>
       </div>
 
+      {/* Health Information Section */}
       <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-bold">Health Information</h3>
@@ -422,7 +464,7 @@ export default function TraineeProfileUpdated() {
             </button>
           ) : null}
         </div>
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block font-medium mb-1">Health Conditions</label>
             <div className="border rounded-md p-2 min-h-10">
@@ -473,10 +515,16 @@ export default function TraineeProfileUpdated() {
       </div>
 
       {isEditing && (
-        <div className="mt-6 flex justify-center">
+        <div className="mt-6 flex justify-center space-x-4">
+          <button
+            onClick={() => setIsEditing(false)}
+            className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+          >
+            Cancel
+          </button>
           <button
             onClick={handleSave}
-            className="px-6 py-2 bg-red-400 text-white rounded-md"
+            className="px-6 py-2 bg-red-400 text-white rounded-md hover:bg-red-500 transition-colors"
           >
             Save
           </button>

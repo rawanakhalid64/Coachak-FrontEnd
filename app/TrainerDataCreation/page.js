@@ -80,7 +80,7 @@ const CreateProfileTrainer = () => {
   };
 
   const handleUploadCertificate = async () => {
-    // Validate certificate form
+   
     if (!certificate.name || !certificate.imageUrl || !certificate.issuingOrganization) {
       showNotification('Please fill required certificate fields', 'error');
       return;
@@ -89,7 +89,7 @@ const CreateProfileTrainer = () => {
     try {
       setIsUploading(true);
       
-      // Create certificate payload
+      
       const certificatePayload = {
         name: certificate.name,
         imageUrl: certificate.imageUrl,
@@ -97,20 +97,20 @@ const CreateProfileTrainer = () => {
         issuingOrganization: certificate.issuingOrganization,
       };
       
-      // Add expiry date if provided
+      
       if (certificate.expiryDate) {
         certificatePayload.expiryDate = certificate.expiryDate;
       }
       
-      // Log the payload being sent to the API
+      
       console.log("Sending certificate payload to API:", certificatePayload);
       
       const response = await instance.post('/api/v1/certificates', certificatePayload);
       
-      // Log the API response
+  
       console.log("Certificate API response:", response.data);
       
-      // Add the new certificate to the list
+     
       setFormData((prev) => {
         const updatedCertificates = [...prev.certificates, response.data];
         console.log("Updated certificates array:", updatedCertificates);
@@ -148,7 +148,7 @@ const CreateProfileTrainer = () => {
   };
 
   const handleSave = async () => {
-    // Validate main form
+    
     if (!formData.bio || !formData.areasOfExpertise || !formData.yearsOfExperience) {
       showNotification('Please fill all required fields', 'error');
       return;

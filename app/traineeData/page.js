@@ -8,7 +8,6 @@ import { useSelector } from "react-redux";
 
 export default function TraineeData() {
   const [formData, setFormData] = useState({
-    image: null,
     age: '',
     height: '',
     weight: '',
@@ -19,6 +18,8 @@ export default function TraineeData() {
     allergies: [],
     job: '',
   });
+  // Keep the image state separate from user data
+  const [uploadedImage, setUploadedImage] = useState(null);
   const [preview, setPreview] = useState(null);
   const [newHealthCondition, setNewHealthCondition] = useState('');
   const [newAllergy, setNewAllergy] = useState('');
@@ -81,6 +82,7 @@ export default function TraineeData() {
     };
   }, []);
 
+  // Separate upload function that only handles the upload
   const uploadImage = async (file) => {
     if (!file) return null;
     
@@ -103,7 +105,7 @@ export default function TraineeData() {
       });
       
       console.log('Image uploaded successfully:', response.data);
-      // Fixed: Using the correct property based on the sample response
+      // Store the image URL returned from the API
       return response.data.data;
     } catch (error) {
       console.error('Error uploading image:', error.response?.data || error.message);
@@ -113,11 +115,19 @@ export default function TraineeData() {
     }
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      setFormData((prev) => ({ ...prev, image: file }));
+      // Set preview for immediate visual feedback
       setPreview(URL.createObjectURL(file));
+      
+      // Upload the image and get URL
+      const imageUrl = await uploadImage(file);
+      if (imageUrl) {
+        setUploadedImage(imageUrl);
+        // Store the image URL in cookies or localStorage to access in the profile page
+        localStorage.setItem('uploadedProfileImage', imageUrl);
+      }
     }
   };
 
@@ -142,22 +152,9 @@ export default function TraineeData() {
     }
 
     try {
-      // First, upload the image if present
-      let profilePicUrl = null;
-      if (formData.image) {
-        profilePicUrl = await uploadImage(formData.image);
-        if (!profilePicUrl) {
-          console.error('Failed to upload image');
-          // You might want to show an error message to the user here
-          // But we'll continue with the rest of the profile update
-        }
-      }
-
       const finalGoal = formData.selectedGoal === 'Other' ? formData.customGoal : formData.selectedGoal;
 
       const payload = {
-        // Only include profilePic if we successfully uploaded an image
-        ...(profilePicUrl && { profilePic: profilePicUrl }),
         weight: Number(formData.weight),
         height: Number(formData.height),
         job: formData.job,
@@ -167,6 +164,7 @@ export default function TraineeData() {
         allergy: allergiesList,
       };
 
+      // Don't include the image URL in the user data update
       const response = await instance.patch('/api/v1/users/me', payload, {
         headers: {
           'Content-Type': 'application/json',
@@ -178,7 +176,6 @@ export default function TraineeData() {
       router.push('/traineeProfileUpdated');
     } catch (error) {
       console.error('Error updating profile:', error.response?.data || error.message);
-      // You may want to add some user feedback here
     }
   };
 
